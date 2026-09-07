@@ -1,0 +1,195 @@
+@import "tailwindcss";
+
+/*
+ * ────────────────────────────────────────────────────────────────────────────
+ * Blorbmart Rider — design tokens
+ *
+ * Two colours do the work, and which one appears is never decorative:
+ *
+ *   BLUE  #1F77F1  brand, navigation, trust. The same blue as the buyer and
+ *                  vendor apps, because a rider who has seen the customer app
+ *                  should recognise this one instantly.
+ *   CORAL #FF5A1F  action and money in motion. Every button that starts
+ *                  something, every naira figure that is still moving.
+ *   GREEN #00B894  money that has landed and is withdrawable. Reserved
+ *                  strictly for that — if green ever means "pending", the one
+ *                  signal a rider actually cares about is gone.
+ *
+ * Light only, deliberately. This is used one-handed, outdoors, in Nigerian
+ * daylight, and a dark surface behind large white numerals is the first thing
+ * to wash out. Maximum contrast beats theme flexibility here.
+ * ────────────────────────────────────────────────────────────────────────────
+ */
+
+@theme {
+  --color-brand: #1F77F1;
+  --color-brand-deep: #1259C4;
+  --color-brand-tint: #EAF2FE;
+
+  --color-action: #FF5A1F;
+  --color-action-deep: #E04405;
+  --color-action-tint: #FFF0EA;
+
+  --color-cash: #00B894;
+  --color-cash-deep: #009377;
+  --color-cash-tint: #E6F8F4;
+
+  --color-warn: #F5A524;
+  --color-warn-tint: #FEF6E7;
+  --color-danger: #E5484D;
+  --color-danger-tint: #FDEDEE;
+
+  --color-ink: #0B1B2B;
+  --color-ink-soft: #4A5A6A;
+  --color-ink-faint: #8B99A7;
+  --color-line: #E2E8F0;
+  --color-surface: #FFFFFF;
+  --color-canvas: #F5F7FA;
+
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  --radius-card: 1.25rem;
+  --radius-sheet: 1.75rem;
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/*
+ * Base styles go in @layer base, and that is not cosmetic.
+ *
+ * Tailwind v4 emits its utilities inside a cascade layer, and unlayered CSS
+ * beats every layer regardless of specificity. An unlayered `* { padding: 0 }`
+ * therefore silently overrides `px-5`, `p-4` and every other spacing utility
+ * in the app — the layout collapses to zero padding everywhere with no error
+ * and no failing selector to find.
+ *
+ * The universal reset is gone entirely: Tailwind's preflight already emits
+ * `*,::before,::after { box-sizing: border-box; margin: 0; padding: 0 }`, so
+ * repeating it here bought nothing and cost the whole spacing scale.
+ */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    background-color: var(--color-canvas);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Installed to a home screen this is the whole window, so a rubber-band
+       scroll past the end exposes the browser chrome the manifest just hid. */
+    overscroll-behavior-y: none;
+  }
+}
+
+@layer base {
+  /* Nothing on this screen benefits from a text-selection drag — a rider
+     pressing a button on the move gets a selection highlight instead of a
+     tap. Element selectors belong in base so a utility can still override
+     them on the rare element that needs to be selectable. */
+  button,
+  [role='button'] {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  input,
+  textarea {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
+
+@layer utilities {
+  /* Money is compared down a column far more often than it is read once, so
+     every figure uses tabular figures and the columns line up. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+
+  /*
+   * The notch and the home indicator.
+   *
+   * Installed as a PWA there is no browser chrome to absorb them, so a bottom
+   * bar without this sits underneath the iPhone home bar and the primary
+   * action of the whole app becomes untappable.
+   */
+  .pad-top-safe {
+    padding-top: max(env(safe-area-inset-top), 0.5rem);
+  }
+
+  .pad-bottom-safe {
+    padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+  }
+
+  .no-select {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .selectable {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--color-line);
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.55) 60%,
+    rgba(255, 255, 255, 0)
+  );
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(0, 184, 148, 0.45); }
+  70% { box-shadow: 0 0 0 12px rgba(0, 184, 148, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 184, 148, 0); }
+}
+
+.pulse-online {
+  animation: pulse-ring 2s infinite;
+}
+
+/*
+ * Reduced motion is honoured for real, not merely shortened.
+ *
+ * Riders use this in motion themselves, and vestibular sensitivity is exactly
+ * the population that turns this setting on. Everything still lands in its
+ * final state — only the travel is removed.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .skeleton::after {
+    display: none;
+  }
+}
