@@ -13,11 +13,24 @@ import {
   Plus,
   Receipt,
   Shield,
-  Sparkles,
-  TrendingUp,
+  Zap,
 } from 'lucide-react'
 import { riderApi, errorMessage, type WalletTransaction } from '../lib/api'
-import { Button, Card, Chip, EmptyState, Field, Money, SelectField, Sheet, Skeleton, cn } from '../components/ui'
+import {
+  Button,
+  Card,
+  Chip,
+  EmptyState,
+  Field,
+  IconBadge,
+  Money,
+  SectionTitle,
+  SelectField,
+  Sheet,
+  Skeleton,
+  cn,
+} from '../components/ui'
+import { GlowField, WalletScene } from '../components/art'
 import { money, timeAgo } from '../lib/format'
 
 /**
@@ -36,15 +49,15 @@ import { money, timeAgo } from '../lib/format'
  * accurate and useless.
  */
 
-const TX_META: Record<string, { label: string; icon: typeof Banknote; tone: string }> = {
-  delivery_earning: { label: 'Delivery', icon: Bike, tone: 'text-cash' },
-  sourcing_bonus: { label: 'Cash-front bonus', icon: Sparkles, tone: 'text-action' },
-  reimbursement: { label: 'Your cash back', icon: HandCoins, tone: 'text-brand' },
-  tip: { label: 'Tip', icon: Sparkles, tone: 'text-cash' },
-  bonus: { label: 'Bonus', icon: Sparkles, tone: 'text-cash' },
-  adjustment: { label: 'Adjustment', icon: Receipt, tone: 'text-ink-soft' },
-  debit: { label: 'Cashed out', icon: ArrowUpRight, tone: 'text-ink-soft' },
-  reversal: { label: 'Returned', icon: ArrowDownLeft, tone: 'text-warn' },
+const TX_META: Record<string, { label: string; icon: typeof Banknote; tone: 'volt' | 'ember' | 'iris' | 'gold' | 'neutral' }> = {
+  delivery_earning: { label: 'Delivery', icon: Bike, tone: 'volt' },
+  sourcing_bonus: { label: 'Cash-front bonus', icon: Zap, tone: 'ember' },
+  reimbursement: { label: 'Your cash back', icon: HandCoins, tone: 'iris' },
+  tip: { label: 'Tip', icon: Zap, tone: 'volt' },
+  bonus: { label: 'Bonus', icon: Zap, tone: 'volt' },
+  adjustment: { label: 'Adjustment', icon: Receipt, tone: 'neutral' },
+  debit: { label: 'Cashed out', icon: ArrowUpRight, tone: 'neutral' },
+  reversal: { label: 'Returned', icon: ArrowDownLeft, tone: 'gold' },
 }
 
 function TransactionRow({ transaction }: { transaction: WalletTransaction }) {
@@ -52,10 +65,8 @@ function TransactionRow({ transaction }: { transaction: WalletTransaction }) {
   const outgoing = transaction.direction === 'out'
 
   return (
-    <li className="flex items-center gap-3 py-3">
-      <div className="w-10 h-10 rounded-xl bg-canvas flex items-center justify-center shrink-0">
-        <meta.icon className={cn('w-[18px] h-[18px]', meta.tone)} aria-hidden />
-      </div>
+    <li className="flex items-center gap-3 py-3.5">
+      <IconBadge icon={meta.icon} tone={meta.tone} size="sm" />
       <div className="flex-1 min-w-0">
         <p className="font-bold text-[14px] truncate">{meta.label}</p>
         <p className="text-[12px] text-ink-faint truncate">
@@ -63,12 +74,19 @@ function TransactionRow({ transaction }: { transaction: WalletTransaction }) {
         </p>
       </div>
       <div className="text-right shrink-0">
-        <span className={cn('tnum font-extrabold text-[15px]', outgoing ? 'text-ink-soft' : 'text-cash')}>
+        <span
+          className={cn(
+            'font-display tnum font-bold text-[15px]',
+            outgoing ? 'text-ink-soft' : 'text-volt',
+          )}
+        >
           {outgoing ? '−' : '+'}
-          {money(transaction.amount).replace('₦', '₦')}
+          {money(transaction.amount)}
         </span>
+        {/* Reimbursed cash is not income, and a rider adding up this column at
+            the end of a week must not be told otherwise. */}
         {!transaction.countsAsEarning && !outgoing && (
-          <p className="text-[10px] font-bold text-ink-faint uppercase tracking-wide">not earnings</p>
+          <p className="text-[10px] font-bold text-ink-faint uppercase tracking-[0.08em]">not earnings</p>
         )}
       </div>
     </li>
@@ -159,53 +177,68 @@ export default function EarningsScreen() {
 
   return (
     <div>
-      <header className="bg-brand text-white pad-top-safe px-5 pt-4 pb-8 rounded-b-[28px]">
-        <p className="text-[13px] font-bold text-white/60 uppercase tracking-wide">Available to cash out</p>
-        {isLoading ? (
-          <Skeleton className="h-14 w-48 mt-2 bg-white/20" />
-        ) : (
-          <Money amount={wallet?.availableBalance ?? 0} size="hero" tone="white" className="mt-1" />
-        )}
+      {/* ── The balance ───────────────────────────────────────────────────
+          One number, as large as the screen allows, in volt because it is
+          the definition of volt: money that has landed and is the rider's to
+          spend. Nothing else on this screen is permitted to compete. */}
+      <header className="relative overflow-hidden pad-top-safe px-5 pt-5 pb-9 grain">
+        <GlowField tone="volt" />
+        <div className="absolute inset-0 dotfield opacity-50" aria-hidden />
 
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <div className="rounded-2xl bg-white/12 p-3">
-            <p className="text-[11px] font-bold text-white/55 uppercase tracking-wide">Earned all time</p>
-            <Money amount={wallet?.totalEarned ?? 0} size="md" tone="white" className="mt-0.5" />
+        <div className="relative">
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-faint">Available to cash out</p>
+          {isLoading ? (
+            <Skeleton className="h-14 w-52 mt-3" />
+          ) : (
+            <Money
+              amount={wallet?.availableBalance ?? 0}
+              size="hero"
+              tone="volt"
+              className="mt-2 aura-volt"
+            />
+          )}
+
+          <div className="mt-6 grid grid-cols-2 gap-3">
+            <div className="rounded-2xl bg-white/5 border border-white/8 p-3.5">
+              <p className="text-[10px] font-bold text-ink-faint uppercase tracking-[0.1em]">Earned all time</p>
+              <Money amount={wallet?.totalEarned ?? 0} size="md" tone="ink" className="mt-1" />
+            </div>
+            <div className="rounded-2xl bg-white/5 border border-white/8 p-3.5">
+              <p className="text-[10px] font-bold text-ink-faint uppercase tracking-[0.1em]">Deliveries</p>
+              <p className="font-display tnum text-lg font-bold mt-1">{wallet?.deliveriesCompleted ?? 0}</p>
+            </div>
           </div>
-          <div className="rounded-2xl bg-white/12 p-3">
-            <p className="text-[11px] font-bold text-white/55 uppercase tracking-wide">Deliveries</p>
-            <p className="tnum text-lg font-extrabold mt-0.5">{wallet?.deliveriesCompleted ?? 0}</p>
-          </div>
+
+          <Button
+            variant="volt"
+            size="lg"
+            fullWidth
+            className="mt-5"
+            icon={ArrowUpRight}
+            disabled={(wallet?.availableBalance ?? 0) <= 0}
+            onClick={startWithdraw}
+          >
+            Cash out
+          </Button>
+          {(wallet?.availableBalance ?? 0) < (wallet?.minWithdrawal ?? 500) &&
+            (wallet?.availableBalance ?? 0) > 0 && (
+              <p className="text-center text-[12px] text-ink-faint mt-2.5">
+                Minimum cashout is {money(wallet?.minWithdrawal ?? 500)}
+              </p>
+            )}
         </div>
-
-        <Button
-          variant="action"
-          size="lg"
-          fullWidth
-          className="mt-5"
-          icon={ArrowUpRight}
-          disabled={(wallet?.availableBalance ?? 0) <= 0}
-          onClick={startWithdraw}
-        >
-          Cash out
-        </Button>
-        {(wallet?.availableBalance ?? 0) < (wallet?.minWithdrawal ?? 500) && (wallet?.availableBalance ?? 0) > 0 && (
-          <p className="text-center text-[12px] text-white/55 mt-2">
-            Minimum cashout is {money(wallet?.minWithdrawal ?? 500)}
-          </p>
-        )}
       </header>
 
-      <main className="px-5 -mt-4 space-y-4">
-        {/* Money the rider is owed. Shown as its own card, never mixed into
-            the balance, because it is not spendable yet and pretending
-            otherwise is how a wallet loses a rider's trust for good. */}
+      <main className="px-5 space-y-4">
+        {/* Money the rider is owed. Its own card, never mixed into the
+            balance, because it is not spendable yet and pretending otherwise
+            is how a wallet loses a rider's trust for good. */}
         {(wallet?.cashOutstanding ?? 0) > 0 && (
-          <Card className="p-4 bg-warn-tint border-warn/25 flex gap-3">
-            <Clock className="w-5 h-5 text-[#8A5B00] shrink-0 mt-0.5" aria-hidden />
-            <div className="flex-1">
+          <Card variant="solid" className="p-4 border-gold/25 flex gap-3">
+            <IconBadge icon={Clock} tone="gold" size="sm" />
+            <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
-                <p className="font-extrabold text-[15px] text-[#8A5B00]">Your cash on the road</p>
+                <p className="font-bold text-[15px] text-gold">Your cash on the road</p>
                 <Money amount={wallet?.cashOutstanding ?? 0} size="md" tone="ink" />
               </div>
               <p className="text-[13px] text-ink-soft leading-snug mt-1">
@@ -216,63 +249,61 @@ export default function EarningsScreen() {
           </Card>
         )}
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2.5">
           {[
             { label: 'Today', value: earnings?.earningsToday },
             { label: 'This week', value: earnings?.earningsWeek },
             { label: 'Per job', value: earnings?.averagePerDelivery },
           ].map((stat) => (
-            <Card key={stat.label} className="p-3">
-              <p className="text-[11px] font-extrabold uppercase tracking-wide text-ink-faint mb-1">{stat.label}</p>
+            <Card key={stat.label} variant="raised" className="p-3">
+              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-ink-faint mb-1.5">
+                {stat.label}
+              </p>
               {earnings ? <Money amount={stat.value ?? 0} size="sm" /> : <Skeleton className="h-5 w-12" />}
             </Card>
           ))}
         </div>
 
-        <Card className="p-4" onClick={() => setShowBank(true)}>
+        <Card variant="raised" className="p-3.5" onClick={() => setShowBank(true)}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-brand-tint flex items-center justify-center shrink-0">
-              <Landmark className="w-5 h-5 text-brand" aria-hidden />
-            </div>
+            <IconBadge icon={Landmark} tone="iris" size="sm" />
             <div className="flex-1 min-w-0">
               {wallet?.bankAccount ? (
                 <>
                   <p className="font-bold text-[15px] truncate">{wallet.bankAccount.bankName}</p>
-                  <p className="text-[13px] text-ink-soft tnum">
+                  <p className="text-[13px] text-ink-faint tnum truncate">
                     {wallet.bankAccount.accountMasked} · {wallet.bankAccount.accountName}
                   </p>
                 </>
               ) : (
                 <>
                   <p className="font-bold text-[15px]">Add your bank account</p>
-                  <p className="text-[13px] text-ink-soft">Needed once, before your first cashout</p>
+                  <p className="text-[13px] text-ink-faint">Needed once, before your first cashout</p>
                 </>
               )}
             </div>
             {wallet?.bankAccount ? (
-              <Chip tone="cash">Change</Chip>
+              <Chip tone="outline">Change</Chip>
             ) : (
-              <Plus className="w-5 h-5 text-brand shrink-0" aria-hidden />
+              <Plus className="w-5 h-5 text-iris-light shrink-0" strokeWidth={2.5} aria-hidden />
             )}
           </div>
         </Card>
 
         {!wallet?.pinSet && (
-          <Card className="p-4 flex items-center gap-3" onClick={() => setShowPinSetup(true)}>
-            <div className="w-10 h-10 rounded-xl bg-action-tint flex items-center justify-center shrink-0">
-              <Shield className="w-5 h-5 text-action" aria-hidden />
-            </div>
-            <div className="flex-1">
+          <Card variant="raised" className="p-3.5 flex items-center gap-3" onClick={() => setShowPinSetup(true)}>
+            <IconBadge icon={Shield} tone="ember" size="sm" />
+            <div className="flex-1 min-w-0">
               <p className="font-bold text-[15px]">Set a wallet PIN</p>
-              <p className="text-[13px] text-ink-soft">Stops anyone with your phone moving your money</p>
+              <p className="text-[13px] text-ink-faint">Stops anyone with your phone moving your money</p>
             </div>
-            <Plus className="w-5 h-5 text-action shrink-0" aria-hidden />
+            <Plus className="w-5 h-5 text-ember shrink-0" strokeWidth={2.5} aria-hidden />
           </Card>
         )}
 
-        <section>
-          <h2 className="text-xl font-extrabold tracking-[-0.01em] mb-2">Activity</h2>
-          <Card className="px-4">
+        <section className="pt-1">
+          <SectionTitle>Activity</SectionTitle>
+          <Card variant="solid" className="px-4">
             {!history ? (
               <div className="py-4 space-y-3">
                 <Skeleton className="h-12" />
@@ -280,12 +311,12 @@ export default function EarningsScreen() {
               </div>
             ) : history.transactions.length === 0 ? (
               <EmptyState
-                icon={TrendingUp}
+                art={<WalletScene className="w-full" />}
                 title="Nothing here yet"
-                message="Finish your first delivery and your earnings will show up right here."
+                message="Finish your first delivery and your earnings will show up right here, named and dated."
               />
             ) : (
-              <ul className="divide-y divide-line">
+              <ul className="divide-y divide-line-soft">
                 {history.transactions.map((transaction) => (
                   <TransactionRow key={transaction.id} transaction={transaction} />
                 ))}
@@ -297,9 +328,13 @@ export default function EarningsScreen() {
 
       {/* ── Cash out ────────────────────────────────────────────────────── */}
       <Sheet open={showWithdraw} onClose={() => setShowWithdraw(false)} title="Cash out">
-        <p className="text-[14px] text-ink-soft mb-5">
-          Going to {wallet?.bankAccount?.bankName} · {wallet?.bankAccount?.accountMasked}
-        </p>
+        <div className="rounded-2xl bg-raised border border-line p-3.5 flex items-center gap-3 mb-5">
+          <IconBadge icon={Landmark} tone="iris" size="sm" />
+          <div className="min-w-0">
+            <p className="font-bold text-[14px] truncate">{wallet?.bankAccount?.bankName}</p>
+            <p className="text-[13px] text-ink-faint tnum">{wallet?.bankAccount?.accountMasked}</p>
+          </div>
+        </div>
         <div className="space-y-4">
           <Field
             label="Amount"
@@ -319,7 +354,7 @@ export default function EarningsScreen() {
             onChange={(event) => setPin(event.target.value.replace(/\D/g, ''))}
           />
           <Button
-            variant="cash"
+            variant="volt"
             size="lg"
             fullWidth
             icon={Banknote}
@@ -379,14 +414,14 @@ export default function EarningsScreen() {
           {verifyBank.isPending && <p className="text-[13px] text-ink-faint">Checking that account…</p>}
 
           {resolvedName && (
-            <div className="rounded-2xl bg-cash-tint p-4">
-              <p className="text-[12px] font-bold uppercase tracking-wide text-cash-deep mb-0.5">Account name</p>
-              <p className="font-extrabold text-[16px]">{resolvedName}</p>
+            <div className="rounded-2xl bg-volt/8 border border-volt/25 p-4">
+              <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-volt mb-1">Account name</p>
+              <p className="font-display font-bold text-[17px] tracking-[-0.02em]">{resolvedName}</p>
             </div>
           )}
 
           <Button
-            variant="primary"
+            variant="iris"
             size="lg"
             fullWidth
             loading={saveBank.isPending}
@@ -400,7 +435,7 @@ export default function EarningsScreen() {
 
       {/* ── PIN ─────────────────────────────────────────────────────────── */}
       <Sheet open={showPinSetup} onClose={() => setShowPinSetup(false)} title="Create a wallet PIN">
-        <p className="text-[14px] text-ink-soft leading-relaxed mb-5">
+        <p className="text-[15px] text-ink-soft leading-relaxed mb-5">
           Four digits, asked for every time you cash out. Do not use your bank PIN, and do not share it — nobody
           from Blorbmart will ever ask you for it.
         </p>
@@ -413,7 +448,7 @@ export default function EarningsScreen() {
           onChange={(event) => setNewPin(event.target.value.replace(/\D/g, ''))}
         />
         <Button
-          variant="primary"
+          variant="iris"
           size="lg"
           fullWidth
           className="mt-5"

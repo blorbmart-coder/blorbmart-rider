@@ -6,15 +6,16 @@ import {
   ArrowRight,
   Bike,
   Car,
-  CheckCircle2,
+  Check,
   Footprints,
   IdCard,
-  PartyPopper,
-  Zap,
+  Power,
+  ShieldCheck,
 } from 'lucide-react'
 import { riderApi, errorMessage, type OnboardingStep, type VehicleType } from '../lib/api'
 import { useRider } from '../contexts/RiderContext'
-import { Button, Field, SelectField, cn } from '../components/ui'
+import { Button, Field, IconBadge, SelectField, cn } from '../components/ui'
+import { BurstScene, GlowField } from '../components/art'
 
 /**
  * Onboarding.
@@ -29,6 +30,13 @@ import { Button, Field, SelectField, cn } from '../components/ui'
 
 const ORDER: OnboardingStep[] = ['campus', 'vehicle', 'identity', 'payout']
 
+const STEP_TITLES: Record<string, string> = {
+  campus: 'Campus',
+  vehicle: 'Vehicle',
+  identity: 'ID',
+  payout: 'Done',
+}
+
 const VEHICLES: { value: VehicleType; label: string; note: string; icon: typeof Bike }[] = [
   { value: 'foot', label: 'On foot', note: 'Great for hostel-to-hostel runs', icon: Footprints },
   { value: 'bicycle', label: 'Bicycle', note: 'Fast across campus', icon: Bike },
@@ -36,7 +44,7 @@ const VEHICLES: { value: VehicleType; label: string; note: string; icon: typeof 
   { value: 'car', label: 'Car', note: 'Big orders and bad weather', icon: Car },
 ]
 
-const ID_TYPES = ['Student ID', "National ID (NIN)", "Driver's licence", 'Voter card', 'International passport']
+const ID_TYPES = ['Student ID', 'National ID (NIN)', "Driver's licence", 'Voter card', 'International passport']
 
 const slide = {
   enter: { opacity: 0, x: 24 },
@@ -51,7 +59,7 @@ export default function OnboardingScreen() {
   const [done, setDone] = useState(false)
 
   // Resume exactly where the server says they stopped.
-  const current: OnboardingStep = rider?.onboardingStep && rider.onboardingStep !== 'done'
+  const current: OnboardingStep = rider?.onboardingStep && ORDER.includes(rider.onboardingStep)
     ? rider.onboardingStep
     : 'campus'
   const stepIndex = Math.max(0, ORDER.indexOf(current))
@@ -94,24 +102,27 @@ export default function OnboardingScreen() {
 
   if (done) {
     return (
-      <div className="min-h-screen bg-brand text-white flex flex-col items-center justify-center px-6 text-center">
+      <div className="relative min-h-screen bg-void flex flex-col items-center justify-center px-6 text-center overflow-hidden">
+        <GlowField tone="volt" />
+        <div className="absolute inset-0 dotfield opacity-40" aria-hidden />
+
         <motion.div
           initial={{ scale: 0.6, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: 'spring', damping: 14, stiffness: 220 }}
-          className="w-20 h-20 rounded-3xl bg-white/15 flex items-center justify-center mb-6"
+          className="relative w-40 h-40"
         >
-          <PartyPopper className="w-10 h-10" aria-hidden />
+          <BurstScene className="w-full h-full" />
         </motion.div>
-        <h1 className="text-[34px] leading-[1.05] font-extrabold tracking-[-0.03em]">
+
+        <h1 className="relative font-display text-[42px] leading-[0.98] font-bold tracking-[-0.045em] mt-2">
           You&rsquo;re in.
         </h1>
-        <p className="mt-3 text-white/80 leading-relaxed max-w-xs">
-          Flip yourself online and orders will start arriving. Your first three deliveries unlock the higher
-          earnings.
+        <p className="relative mt-4 text-ink-soft leading-relaxed max-w-xs">
+          Flip yourself online and orders start arriving. Your first three deliveries unlock the higher earnings.
         </p>
-        <div className="mt-8 w-full max-w-sm">
-          <Button variant="action" size="lg" fullWidth icon={Zap} onClick={finish}>
+        <div className="relative mt-9 w-full max-w-sm">
+          <Button variant="volt" size="lg" fullWidth icon={Power} onClick={finish}>
             Take me to the jobs
           </Button>
         </div>
@@ -120,34 +131,54 @@ export default function OnboardingScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-surface flex flex-col">
-      <header className="pad-top-safe px-5 pt-4 pb-3">
-        <div className="flex items-center gap-2 mb-4">
+    <div className="relative min-h-screen bg-void flex flex-col overflow-hidden">
+      <GlowField tone="iris" className="h-[380px] bottom-auto" />
+
+      <header className="relative pad-top-safe px-5 pt-5 pb-4">
+        {/* The steps are named, not just counted. "Step 2 of 4" tells a
+            student nothing about what is left; "Vehicle, then ID, then done"
+            tells them it is nearly over. */}
+        <ol className="flex items-center gap-2">
           {ORDER.map((step, index) => (
-            <div
-              key={step}
-              className={cn(
-                'h-1.5 flex-1 rounded-full transition-colors duration-300',
-                index <= stepIndex ? 'bg-brand' : 'bg-line',
-              )}
-            />
+            <li key={step} className="flex-1">
+              <div
+                className={cn(
+                  'h-1.5 rounded-full transition-colors duration-500',
+                  index < stepIndex ? 'bg-volt' : index === stepIndex ? 'bg-volt' : 'bg-line',
+                )}
+              />
+              <p
+                className={cn(
+                  'text-[10px] font-bold uppercase tracking-[0.08em] mt-2 transition-colors',
+                  index <= stepIndex ? 'text-ink-soft' : 'text-ink-faint',
+                )}
+              >
+                {STEP_TITLES[step]}
+              </p>
+            </li>
           ))}
-        </div>
-        <p className="text-[13px] font-bold text-ink-faint">
-          Step {stepIndex + 1} of {ORDER.length}
-        </p>
+        </ol>
       </header>
 
-      <main className="flex-1 px-5 pb-8">
+      <main className="relative flex-1 px-5 pb-10">
         <AnimatePresence mode="wait">
           {current === 'campus' && (
-            <motion.div key="campus" variants={slide} initial="enter" animate="center" exit="exit" transition={{ duration: 0.22 }}>
-              <h1 className="text-[30px] leading-[1.1] font-extrabold tracking-[-0.03em]">Where do you school?</h1>
-              <p className="mt-2 text-ink-soft">
+            <motion.div
+              key="campus"
+              variants={slide}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.22 }}
+            >
+              <h1 className="font-display text-[32px] leading-[1.05] font-bold tracking-[-0.04em] mt-4">
+                Where do you school?
+              </h1>
+              <p className="mt-3 text-ink-soft leading-relaxed">
                 We use this to send you orders near your campus.
               </p>
 
-              <div className="mt-7 space-y-4">
+              <div className="mt-8 space-y-4">
                 <Field
                   label="School"
                   placeholder="e.g. Osun State University"
@@ -177,13 +208,13 @@ export default function OnboardingScreen() {
                 </div>
               </div>
 
-              <div className="mt-7">
+              <div className="mt-8">
                 <Button
-                  variant="action"
+                  variant="volt"
                   size="lg"
                   fullWidth
                   loading={busy}
-                  icon={ArrowRight}
+                  iconRight={ArrowRight}
                   disabled={school.trim().length < 2}
                   onClick={() => save('campus', { school, department, level, matricNumber })}
                 >
@@ -194,11 +225,22 @@ export default function OnboardingScreen() {
           )}
 
           {current === 'vehicle' && (
-            <motion.div key="vehicle" variants={slide} initial="enter" animate="center" exit="exit" transition={{ duration: 0.22 }}>
-              <h1 className="text-[30px] leading-[1.1] font-extrabold tracking-[-0.03em]">How do you get around?</h1>
-              <p className="mt-2 text-ink-soft">On foot counts. On a busy campus it is often the fastest.</p>
+            <motion.div
+              key="vehicle"
+              variants={slide}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.22 }}
+            >
+              <h1 className="font-display text-[32px] leading-[1.05] font-bold tracking-[-0.04em] mt-4">
+                How do you get around?
+              </h1>
+              <p className="mt-3 text-ink-soft leading-relaxed">
+                On foot counts. On a busy campus it is often the fastest.
+              </p>
 
-              <div className="mt-7 space-y-3">
+              <div className="mt-8 space-y-3">
                 {VEHICLES.map((vehicle) => {
                   const selected = vehicleType === vehicle.value
                   return (
@@ -207,24 +249,30 @@ export default function OnboardingScreen() {
                       onClick={() => setVehicleType(vehicle.value)}
                       aria-pressed={selected}
                       className={cn(
-                        'w-full min-h-[68px] flex items-center gap-4 px-4 rounded-2xl border-2 text-left cursor-pointer',
-                        'transition-colors duration-150',
-                        selected ? 'border-brand bg-brand-tint' : 'border-line bg-surface active:bg-canvas',
+                        'w-full min-h-[74px] flex items-center gap-4 px-4 rounded-[20px] border text-left cursor-pointer',
+                        'transition-all duration-200 active:scale-[0.99]',
+                        selected
+                          ? 'border-volt/40 bg-volt/8 shadow-[0_12px_36px_-20px_rgba(175,255,0,0.9)]'
+                          : 'border-line bg-surface active:bg-raised',
                       )}
                     >
-                      <div
+                      <span
                         className={cn(
-                          'w-11 h-11 rounded-xl flex items-center justify-center shrink-0',
-                          selected ? 'bg-brand text-white' : 'bg-canvas text-ink-soft',
+                          'w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors',
+                          selected ? 'bg-volt text-void' : 'bg-raised text-ink-soft',
                         )}
                       >
-                        <vehicle.icon className="w-5 h-5" aria-hidden />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-bold text-[15px]">{vehicle.label}</p>
-                        <p className="text-[13px] text-ink-soft">{vehicle.note}</p>
-                      </div>
-                      {selected && <CheckCircle2 className="w-5 h-5 text-brand shrink-0" aria-hidden />}
+                        <vehicle.icon className="w-5 h-5" strokeWidth={2.3} aria-hidden />
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block font-bold text-[15px]">{vehicle.label}</span>
+                        <span className="block text-[13px] text-ink-soft mt-0.5">{vehicle.note}</span>
+                      </span>
+                      {selected && (
+                        <span className="w-6 h-6 rounded-full bg-volt flex items-center justify-center shrink-0">
+                          <Check className="w-3.5 h-3.5 text-void" strokeWidth={3.5} aria-hidden />
+                        </span>
+                      )}
                     </button>
                   )
                 })}
@@ -233,7 +281,11 @@ export default function OnboardingScreen() {
               {/* Only motorised vehicles have a plate. Asking every rider for
                   one is a dead end for anyone delivering on foot. */}
               {(vehicleType === 'bike' || vehicleType === 'car') && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-4">
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="mt-4 overflow-hidden"
+                >
                   <Field
                     label="Plate number"
                     placeholder="ABC 123 XY"
@@ -244,13 +296,13 @@ export default function OnboardingScreen() {
                 </motion.div>
               )}
 
-              <div className="mt-7">
+              <div className="mt-8">
                 <Button
-                  variant="action"
+                  variant="volt"
                   size="lg"
                   fullWidth
                   loading={busy}
-                  icon={ArrowRight}
+                  iconRight={ArrowRight}
                   disabled={!vehicleType || ((vehicleType === 'bike' || vehicleType === 'car') && !plateNumber.trim())}
                   onClick={() => save('vehicle', { vehicleType, plateNumber })}
                 >
@@ -261,17 +313,24 @@ export default function OnboardingScreen() {
           )}
 
           {current === 'identity' && (
-            <motion.div key="identity" variants={slide} initial="enter" animate="center" exit="exit" transition={{ duration: 0.22 }}>
-              <div className="w-12 h-12 rounded-2xl bg-brand-tint flex items-center justify-center mb-5">
-                <IdCard className="w-6 h-6 text-brand" aria-hidden />
-              </div>
-              <h1 className="text-[30px] leading-[1.1] font-extrabold tracking-[-0.03em]">One ID and you&rsquo;re done.</h1>
-              <p className="mt-2 text-ink-soft leading-relaxed">
-                Customers are handing you their food and sometimes their money. This is how we know who is on
-                the road.
+            <motion.div
+              key="identity"
+              variants={slide}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.22 }}
+            >
+              <IconBadge icon={IdCard} tone="iris" size="lg" className="mt-4" />
+              <h1 className="font-display text-[32px] leading-[1.05] font-bold tracking-[-0.04em] mt-5">
+                One ID and you&rsquo;re done.
+              </h1>
+              <p className="mt-3 text-ink-soft leading-relaxed">
+                Customers are handing you their food and sometimes their money. This is how we know who is on the
+                road.
               </p>
 
-              <div className="mt-7 space-y-4">
+              <div className="mt-8 space-y-4">
                 <SelectField label="ID type" value={idType} onChange={(event) => setIdType(event.target.value)}>
                   {ID_TYPES.map((type) => (
                     <option key={type} value={type}>
@@ -287,13 +346,13 @@ export default function OnboardingScreen() {
                 />
               </div>
 
-              <div className="mt-7">
+              <div className="mt-8">
                 <Button
-                  variant="action"
+                  variant="volt"
                   size="lg"
                   fullWidth
                   loading={busy}
-                  icon={ArrowRight}
+                  iconRight={ArrowRight}
                   disabled={!idNumber.trim()}
                   onClick={() => save('identity', { idType, idNumber })}
                 >
@@ -304,23 +363,44 @@ export default function OnboardingScreen() {
           )}
 
           {current === 'payout' && (
-            <motion.div key="payout" variants={slide} initial="enter" animate="center" exit="exit" transition={{ duration: 0.22 }}>
-              <h1 className="text-[30px] leading-[1.1] font-extrabold tracking-[-0.03em]">That&rsquo;s everything.</h1>
-              <p className="mt-2 text-ink-soft leading-relaxed">
-                You can add your bank account now or later — you only need it the first time you cash out.
-                Nothing is stopping you from taking a job right away.
+            <motion.div
+              key="payout"
+              variants={slide}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.22 }}
+            >
+              <h1 className="font-display text-[32px] leading-[1.05] font-bold tracking-[-0.04em] mt-4">
+                That&rsquo;s everything.
+              </h1>
+              <p className="mt-3 text-ink-soft leading-relaxed">
+                You can add your bank account now or later — you only need it the first time you cash out. Nothing
+                is stopping you from taking a job right away.
               </p>
 
-              <div className="mt-6 bg-cash-tint rounded-[var(--radius-card)] p-5">
-                <p className="font-extrabold text-[15px] text-cash-deep mb-1">Your money is separate</p>
+              <div className="mt-7 rounded-[var(--radius-card)] bg-volt/8 border border-volt/25 p-5">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <ShieldCheck className="w-5 h-5 text-volt shrink-0" strokeWidth={2.4} aria-hidden />
+                  <p className="font-display font-bold text-[16px] text-volt tracking-[-0.02em]">
+                    Your money is separate
+                  </p>
+                </div>
                 <p className="text-[13px] text-ink-soft leading-relaxed">
                   Earnings and any cash you front for an order are tracked apart from each other, so you can
                   always see exactly what you made and exactly what you are owed back.
                 </p>
               </div>
 
-              <div className="mt-7 space-y-3">
-                <Button variant="action" size="lg" fullWidth loading={busy} icon={ArrowRight} onClick={() => save('payout', {})}>
+              <div className="mt-8">
+                <Button
+                  variant="volt"
+                  size="lg"
+                  fullWidth
+                  loading={busy}
+                  iconRight={ArrowRight}
+                  onClick={() => save('payout', {})}
+                >
                   Finish and go online
                 </Button>
               </div>

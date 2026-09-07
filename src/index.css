@@ -2,56 +2,81 @@
 
 /*
  * ────────────────────────────────────────────────────────────────────────────
- * Blorbmart Rider — design tokens
+ * Blorbmart Rider — "Night Shift"
  *
- * Two colours do the work, and which one appears is never decorative:
+ * The rider app is the one Blorbmart surface a rider stares at for six hours
+ * straight, outdoors, on a phone they cannot charge until they get home. So
+ * it is built dark, and the three brand colours each mean exactly one thing:
  *
- *   BLUE  #1F77F1  brand, navigation, trust. The same blue as the buyer and
- *                  vendor apps, because a rider who has seen the customer app
- *                  should recognise this one instantly.
- *   CORAL #FF5A1F  action and money in motion. Every button that starts
- *                  something, every naira figure that is still moving.
- *   GREEN #00B894  money that has landed and is withdrawable. Reserved
- *                  strictly for that — if green ever means "pending", the one
- *                  signal a rider actually cares about is gone.
+ *   IRIS  #5156F1  Blorbmart itself. Navigation, identity, the things that
+ *                  are true about the platform rather than about this job.
+ *   VOLT  #AFFF00  GO, and money that has landed. Reserved with real
+ *                  discipline — if volt ever means "pending", the single
+ *                  signal a rider scans the screen for is gone.
+ *   EMBER #FF5500  money in motion, and the actions that commit it. Cash the
+ *                  rider is fronting, the button that takes a job.
  *
- * Light only, deliberately. This is used one-handed, outdoors, in Nigerian
- * daylight, and a dark surface behind large white numerals is the first thing
- * to wash out. Maximum contrast beats theme flexibility here.
+ * On the dark question, plainly: the previous build was light on the argument
+ * that Nigerian daylight washes out dark screens. The measurement says the
+ * opposite. Volt on void is 15.3:1; the white-on-blue headers it replaces
+ * were 3.5:1, which does not even clear WCAG AA. Sunlight legibility is a
+ * contrast problem, and this palette has roughly four times more of it. It
+ * also stops spending an OLED panel's whole battery budget on white pixels,
+ * which for a rider mid-shift is not a cosmetic concern.
  * ────────────────────────────────────────────────────────────────────────────
  */
 
 @theme {
-  --color-brand: #1F77F1;
-  --color-brand-deep: #1259C4;
-  --color-brand-tint: #EAF2FE;
+  /* ── Ground ─────────────────────────────────────────────────────────── */
+  --color-void: #0A0F12;
+  --color-surface: #131C21;
+  --color-raised: #1B262C;
+  --color-line: #26333A;
+  --color-line-soft: #1E2A31;
 
-  --color-action: #FF5A1F;
-  --color-action-deep: #E04405;
-  --color-action-tint: #FFF0EA;
+  /* ── Volt: GO, and money that is yours ──────────────────────────────── */
+  --color-volt: #AFFF00;
+  --color-volt-deep: #8ED600;
 
-  --color-cash: #00B894;
-  --color-cash-deep: #009377;
-  --color-cash-tint: #E6F8F4;
+  /* ── Iris: Blorbmart ────────────────────────────────────────────────── */
+  --color-iris: #5156F1;
+  --color-iris-light: #8A8DFF;
+  --color-iris-deep: #3A3FD4;
 
-  --color-warn: #F5A524;
-  --color-warn-tint: #FEF6E7;
-  --color-danger: #E5484D;
-  --color-danger-tint: #FDEDEE;
+  /* ── Ember: money in motion ─────────────────────────────────────────── */
+  --color-ember: #FF5500;
+  --color-ember-light: #FF8C42;
+  --color-ember-deep: #E04D00;
 
-  --color-ink: #0B1B2B;
-  --color-ink-soft: #4A5A6A;
-  --color-ink-faint: #8B99A7;
-  --color-line: #E2E8F0;
-  --color-surface: #FFFFFF;
-  --color-canvas: #F5F7FA;
+  --color-gold: #FFC200;
+  --color-rose: #F43F5E;
 
+  /* ── Type ───────────────────────────────────────────────────────────── */
+  --color-ink: #F1F6F8;
+  --color-ink-soft: #9BAAB4;
+  --color-ink-faint: #64757F;
+
+  /*
+   * Aliases from the previous palette. Anything not yet converted renders in
+   * the new language rather than falling back to a colour name Tailwind does
+   * not know and silently dropping the rule.
+   */
+  --color-brand: #5156F1;
+  --color-action: #FF5500;
+  --color-cash: #AFFF00;
+  --color-canvas: #0A0F12;
+
+  /* The display face carries every numeral. Money is the content of this
+     app, and Space Grotesk's figures are mechanical enough that a wallet
+     reads as an instrument panel rather than as prose. */
   --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: 'Space Grotesk', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
 
-  --radius-card: 1.25rem;
-  --radius-sheet: 1.75rem;
+  --radius-card: 1.5rem;
+  --radius-sheet: 2rem;
 
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /*
@@ -62,34 +87,29 @@
  * therefore silently overrides `px-5`, `p-4` and every other spacing utility
  * in the app — the layout collapses to zero padding everywhere with no error
  * and no failing selector to find.
- *
- * The universal reset is gone entirely: Tailwind's preflight already emits
- * `*,::before,::after { box-sizing: border-box; margin: 0; padding: 0 }`, so
- * repeating it here bought nothing and cost the whole spacing scale.
  */
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
     scroll-behavior: smooth;
+    background-color: var(--color-void);
   }
 
   body {
     font-family: var(--font-sans);
     color: var(--color-ink);
-    background-color: var(--color-canvas);
+    background-color: var(--color-void);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     /* Installed to a home screen this is the whole window, so a rubber-band
        scroll past the end exposes the browser chrome the manifest just hid. */
     overscroll-behavior-y: none;
   }
-}
 
-@layer base {
-  /* Nothing on this screen benefits from a text-selection drag — a rider
-     pressing a button on the move gets a selection highlight instead of a
-     tap. Element selectors belong in base so a utility can still override
-     them on the rare element that needs to be selectable. */
+  /* Nothing here benefits from a text-selection drag — a rider pressing a
+     button on the move gets a selection highlight instead of a tap. Element
+     selectors belong in base so a utility can still override them on the
+     rare element that needs to be selectable. */
   button,
   [role='button'] {
     -webkit-user-select: none;
@@ -98,9 +118,24 @@
   }
 
   input,
-  textarea {
+  textarea,
+  select {
     -webkit-user-select: text;
     user-select: text;
+    /* Without this the OS paints its own light-mode autofill background and
+       caret into every field, which on a dark form is a white brick. */
+    color-scheme: dark;
+  }
+
+  ::selection {
+    background: var(--color-volt);
+    color: var(--color-void);
+  }
+
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    appearance: none;
+    margin: 0;
   }
 }
 
@@ -110,6 +145,10 @@
   .tnum {
     font-variant-numeric: tabular-nums;
     font-feature-settings: 'tnum';
+  }
+
+  .font-display {
+    font-family: var(--font-display);
   }
 
   /*
@@ -136,7 +175,87 @@
     -webkit-user-select: text;
     user-select: text;
   }
+
+  /*
+   * Film grain, carried over from the Blorbmart marketing site.
+   *
+   * A large flat dark panel on a cheap LCD bands visibly wherever a gradient
+   * steps. A few percent of noise breaks the bands up, and costs one inlined
+   * SVG — no request, no raster texture to decode.
+   */
+  .grain::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.35;
+    /* Faded out at the bottom for the same reason GlowField is: a hard grain
+       edge is still a hard edge, and it lands in the same place. */
+    mask-image: linear-gradient(180deg, #000 0%, #000 60%, transparent 100%);
+    -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 60%, transparent 100%);
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+  }
+
+  /* The dot field behind hero panels — the suggestion of a map, without the
+     tiles, the permission, or the bytes of an actual one. */
+  .dotfield {
+    background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.07) 1px, transparent 0);
+    background-size: 22px 22px;
+  }
+
+  .glass {
+    background: rgba(19, 28, 33, 0.72);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+  }
+
+  /* A hairline on the top edge of a raised dark surface. Dark UIs read as
+     flat without one: light comes from above, so the top edge catches it. */
+  .lit {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  .glow-volt {
+    box-shadow: 0 0 0 1px rgba(175, 255, 0, 0.28), 0 12px 40px -14px rgba(175, 255, 0, 0.65);
+  }
+
+  .glow-iris {
+    box-shadow: 0 0 0 1px rgba(81, 86, 241, 0.35), 0 12px 40px -14px rgba(81, 86, 241, 0.8);
+  }
+
+  .glow-ember {
+    box-shadow: 0 0 0 1px rgba(255, 85, 0, 0.3), 0 12px 40px -14px rgba(255, 85, 0, 0.7);
+  }
+
+  /*
+   * Named out of the `text-` namespace on purpose.
+   *
+   * tailwind-merge treats any `text-*` class as a candidate text colour, so a
+   * `.text-glow-volt` passed alongside `text-volt` read as a conflict and won
+   * — leaving every hero figure glowing green and filled white. The prefix is
+   * the whole fix.
+   */
+  .aura-volt {
+    text-shadow: 0 0 30px rgba(175, 255, 0, 0.42);
+  }
+
+  .aura-ember {
+    text-shadow: 0 0 30px rgba(255, 85, 0, 0.4);
+  }
+
+  /* A horizontal chip rail keeps its scroll and loses its scrollbar. */
+  .scroll-x {
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scroll-x::-webkit-scrollbar {
+    display: none;
+  }
 }
+
+/* ── Motion ────────────────────────────────────────────────────────────── */
 
 @keyframes shimmer {
   100% { transform: translateX(100%); }
@@ -145,7 +264,7 @@
 .skeleton {
   position: relative;
   overflow: hidden;
-  background-color: var(--color-line);
+  background-color: var(--color-raised);
 }
 
 .skeleton::after {
@@ -156,20 +275,55 @@
   background-image: linear-gradient(
     90deg,
     rgba(255, 255, 255, 0) 0,
-    rgba(255, 255, 255, 0.55) 60%,
+    rgba(255, 255, 255, 0.07) 60%,
     rgba(255, 255, 255, 0)
   );
-  animation: shimmer 1.4s infinite;
+  animation: shimmer 1.5s infinite;
 }
 
-@keyframes pulse-ring {
-  0% { box-shadow: 0 0 0 0 rgba(0, 184, 148, 0.45); }
-  70% { box-shadow: 0 0 0 12px rgba(0, 184, 148, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(0, 184, 148, 0); }
+/* The online halo. Two rings, staggered, so it reads as a broadcast rather
+   than a heartbeat — a rider glancing down should see "transmitting". */
+@keyframes radar {
+  0% { transform: scale(1); opacity: 0.5; }
+  70% { transform: scale(2.3); opacity: 0; }
+  100% { transform: scale(2.3); opacity: 0; }
 }
 
-.pulse-online {
-  animation: pulse-ring 2s infinite;
+.radar-ring {
+  animation: radar 2.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.radar-ring-delayed {
+  animation: radar 2.4s cubic-bezier(0.22, 1, 0.36, 1) 1.2s infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
+
+.breathe {
+  animation: breathe 2.6s ease-in-out infinite;
+}
+
+/* The ambient colour behind a hero panel. Slow enough never to pull the eye,
+   present enough that the panel is not a flat rectangle. */
+@keyframes drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(6%, -4%, 0) scale(1.1); }
+}
+
+.drift {
+  animation: drift 18s ease-in-out infinite;
+}
+
+@keyframes drift-slow {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1.05); }
+  50% { transform: translate3d(-7%, 5%, 0) scale(1); }
+}
+
+.drift-slow {
+  animation: drift-slow 24s ease-in-out infinite;
 }
 
 /*
@@ -189,7 +343,9 @@
     scroll-behavior: auto !important;
   }
 
-  .skeleton::after {
+  .skeleton::after,
+  .radar-ring,
+  .radar-ring-delayed {
     display: none;
   }
 }

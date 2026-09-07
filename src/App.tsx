@@ -1,11 +1,12 @@
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
-import { Bike, Clock } from 'lucide-react'
+import { Clock } from 'lucide-react'
 import { lazy, Suspense, type ReactNode } from 'react'
 import { RiderProvider, useRider } from './contexts/RiderContext'
 import AppShell from './components/AppShell'
-import { Button } from './components/ui'
+import { Button, IconBadge } from './components/ui'
+import { BoltMark, GlowField } from './components/art'
 
 /*
  * Routes are split so the first paint downloads one screen, not nine.
@@ -37,11 +38,20 @@ const queryClient = new QueryClient({
   },
 })
 
+/**
+ * The splash.
+ *
+ * Deliberately the brand mark alone on the app's own ground, with no spinner:
+ * this is on screen for a few hundred milliseconds in the good case, and a
+ * spinner in that window reads as slowness that is not there. The breathing
+ * opacity is enough to say the app is alive if the wait does run long.
+ */
 function Splash() {
   return (
-    <div className="min-h-screen bg-brand flex items-center justify-center">
-      <div className="w-16 h-16 rounded-3xl bg-white/15 flex items-center justify-center animate-pulse">
-        <Bike className="w-8 h-8 text-white" aria-hidden />
+    <div className="relative min-h-screen bg-void flex items-center justify-center overflow-hidden">
+      <GlowField tone="mixed" />
+      <div className="relative w-16 h-16 rounded-[20px] bg-volt flex items-center justify-center breathe">
+        <BoltMark className="w-7 h-7 text-void" />
       </div>
     </div>
   )
@@ -50,19 +60,20 @@ function Splash() {
 function AwaitingApproval() {
   const { logout } = useRider()
   return (
-    <div className="min-h-screen bg-surface flex flex-col items-center justify-center px-6 text-center">
-      <div className="w-16 h-16 rounded-3xl bg-warn-tint flex items-center justify-center mb-5">
-        <Clock className="w-8 h-8 text-[#8A5B00]" aria-hidden />
-      </div>
-      <h1 className="text-[28px] leading-tight font-extrabold tracking-[-0.02em]">Almost there</h1>
-      <p className="mt-3 text-ink-soft leading-relaxed max-w-xs">
-        Your account is being reviewed. We will let you know the moment you can start taking jobs — usually
-        within a few hours.
-      </p>
-      <div className="mt-8">
-        <Button variant="outline" onClick={logout}>
-          Sign out
-        </Button>
+    <div className="relative min-h-screen bg-void flex flex-col items-center justify-center px-6 text-center overflow-hidden">
+      <GlowField tone="iris" />
+      <div className="relative">
+        <IconBadge icon={Clock} tone="gold" size="lg" className="mx-auto mb-6" />
+        <h1 className="font-display text-[32px] leading-[1.05] font-bold tracking-[-0.035em]">Almost there</h1>
+        <p className="mt-4 text-ink-soft leading-relaxed max-w-xs mx-auto">
+          Your account is being reviewed. We will let you know the moment you can start taking jobs — usually
+          within a few hours.
+        </p>
+        <div className="mt-9">
+          <Button variant="outline" onClick={logout}>
+            Sign out
+          </Button>
+        </div>
       </div>
     </div>
   )
@@ -220,15 +231,19 @@ export default function App() {
           toastOptions={{
             duration: 3200,
             style: {
-              borderRadius: '14px',
-              background: '#0B1B2B',
-              color: '#fff',
+              borderRadius: '16px',
+              background: '#1B262C',
+              border: '1px solid #26333A',
+              color: '#F1F6F8',
               fontWeight: 600,
               fontSize: '14px',
+              boxShadow: '0 18px 50px -18px rgba(0,0,0,0.9)',
               // Clears the notch on an installed PWA, where there is no
               // browser chrome to push it down.
               marginTop: 'env(safe-area-inset-top)',
             },
+            success: { iconTheme: { primary: '#AFFF00', secondary: '#0A0F12' } },
+            error: { iconTheme: { primary: '#F43F5E', secondary: '#0A0F12' } },
           }}
         />
       </RiderProvider>
