@@ -1,7 +1,7 @@
 import axios, { AxiosError } from 'axios'
 import { auth } from './firebase'
 
-export const BASE_URL = import.meta.env.VITE_API_URL ?? 'https://blorbmart.onrender.com'
+export const BASE_URL = import.meta.env.VITE_API_URL ?? 'https://blorbmart-tr1i.onrender.com'
 
 const api = axios.create({ baseURL: BASE_URL, timeout: 30000 })
 
@@ -28,6 +28,17 @@ export function errorMessage(error: unknown, fallback = 'Something went wrong. T
   if (axiosError?.response?.data?.message) return axiosError.response.data.message
   if (axiosError?.code === 'ECONNABORTED') return 'That took too long. Check your connection.'
   if (axiosError?.message === 'Network Error') return 'No connection. We will retry when you are back online.'
+
+  // A 404 on an endpoint the app calls by hand is never the rider's fault and
+  // never fixed by trying again — it means this build is pointed at the wrong
+  // server. That case shipped once already, as a signup that told riders to
+  // "tap Continue to retry" against a host that answered 404 to everything;
+  // the plain-text body carried no `message`, so it fell through to a
+  // reassuring fallback and hid a configuration error behind a retry loop.
+  const status = axiosError?.response?.status
+  if (status === 404) return 'We cannot reach Blorbmart right now. Please contact support.'
+  if (status && status >= 500) return 'Blorbmart is having trouble. Try again in a moment.'
+
   return fallback
 }
 
