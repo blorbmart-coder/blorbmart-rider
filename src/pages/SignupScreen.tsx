@@ -1,11 +1,15 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile,
+} from 'firebase/auth'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
-import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Info } from 'lucide-react'
 import { auth } from '../lib/firebase'
 import { riderApi, errorMessage } from '../lib/api'
 import { useRider } from '../contexts/RiderContext'
@@ -28,24 +32,92 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>
 
+/**
+ * Signup is two independent commits, and it used to pretend it was one.
+ *
+ * Creating the Firebase account and creating the rider profile are separate
+ * writes to separate systems. The account is created first, and if the profile
+ * call then failed — a cold backend, a dropped request on campus data — the
+ * old code showed one generic error and left a real, usable Firebase account
+ * behind with nothing attached to it. Every retry from there hit
+ * `email-already-in-use`, so the rider was told to sign in instead; signing in
+ * found no profile and bounced them straight back to this screen. That is the
+ * loop being reported: an error on screen, the email plainly taken in the
+ * Firebase console, and no way forward.
+ *
+ * So the two phases are tracked separately and the second one is made
+ * resumable. If we already hold a signed-in user for this email, account
+ * creation is skipped entirely; if the email is taken, we try the password
+ * against it, because the overwhelmingly likely owner of a half-made account
+ * is the person currently trying to finish it. Only when that password is
+ * wrong is it somebody else's account, which is the one case worth sending to
+ * the sign-in screen.
+ */
+type Phase = 'auth' | 'profile'
+
 export default function SignupScreen() {
   const navigate = useNavigate()
-  const { refresh } = useRider()
+  const { firebaseUser, needsRegistration, refresh } = useRider()
   const [busy, setBusy] = useState(false)
+
+  // Somebody who got here mid-loop already has an account; the email on it is
+  // the only one that can be used, so it is filled in and the copy changes to
+  // say what is actually happening.
+  const resuming = Boolean(firebaseUser && needsRegistration)
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<FormValues>({ resolver: zodResolver(schema), mode: 'onBlur' })
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    mode: 'onBlur',
+    defaultValues: {
+      email: firebaseUser?.email ?? '',
+      firstName: firebaseUser?.displayName?.split(' ')[0] ?? '',
+      lastName: firebaseUser?.displayName?.split(' ').slice(1).join(' ') ?? '',
+    },
+  })
 
   const onSubmit = async (values: FormValues) => {
     setBusy(true)
-    try {
-      const credential = await createUserWithEmailAndPassword(auth, values.email, values.password)
-      const displayName = `${values.firstName} ${values.lastName}`.trim()
-      await updateProfile(credential.user, { displayName })
+    let phase: Phase = 'auth'
 
+    try {
+      const email = values.email.trim().toLowerCase()
+      const displayName = `${values.firstName} ${values.lastName}`.trim()
+
+      /* ── Phase 1: make sure we hold a signed-in user for this email ── */
+
+      let user = auth.currentUser
+
+      if (!user || (user.email ?? '').toLowerCase() !== email) {
+        try {
+          user = (await createUserWithEmailAndPassword(auth, email, values.password)).user
+        } catch (error) {
+          const code = (error as { code?: string })?.code
+          if (code !== 'auth/email-already-in-use') throw error
+
+          // The account exists. If this password opens it, it is theirs and
+          // almost certainly the orphan left by an earlier failed attempt —
+          // carry on and finish the half that is missing.
+          try {
+            user = (await signInWithEmailAndPassword(auth, email, values.password)).user
+          } catch {
+            toast.error('That email already has an account. Sign in instead.')
+            return
+          }
+        }
+      }
+
+      if (user.displayName !== displayName) {
+        // Cosmetic only — never allowed to fail the signup around it.
+        await updateProfile(user, { displayName }).catch(() => {})
+      }
+
+      /* ── Phase 2: the rider profile. Idempotent on the server. ── */
+
+      phase = 'profile'
       await riderApi.register({
         firstName: values.firstName,
         lastName: values.lastName,
@@ -56,15 +128,26 @@ export default function SignupScreen() {
       navigate('/onboarding', { replace: true })
     } catch (error) {
       const code = (error as { code?: string })?.code
-      if (code === 'auth/email-already-in-use') {
-        toast.error('That email already has an account. Sign in instead.')
-      } else if (code === 'auth/weak-password') {
-        toast.error('Pick a stronger password — at least 6 characters.')
-      } else if (code === 'auth/invalid-email') {
-        toast.error('Check that email address.')
-      } else {
-        toast.error(errorMessage(error, 'Could not create your account. Try again.'))
+
+      if (phase === 'auth') {
+        if (code === 'auth/weak-password') {
+          toast.error('Pick a stronger password — at least 6 characters.')
+        } else if (code === 'auth/invalid-email') {
+          toast.error('Check that email address.')
+        } else if (code === 'auth/network-request-failed') {
+          toast.error('No connection. Check your internet and try again.')
+        } else {
+          toast.error(errorMessage(error, 'Could not create your account. Try again.'))
+        }
+        return
       }
+
+      // Phase 2. The account is real and they are signed in, so the honest
+      // message is that one step is outstanding — not that signup failed.
+      // Pressing Continue again resumes from exactly here.
+      toast.error(
+        errorMessage(error, 'Your account is ready, but we could not finish your profile. Tap Continue to retry.'),
+      )
     } finally {
       setBusy(false)
     }
@@ -92,13 +175,39 @@ export default function SignupScreen() {
           </div>
 
           <h1 className="font-display text-[38px] leading-[1.02] font-bold tracking-[-0.04em]">
-            Let&rsquo;s get you
-            <br />
-            on the road.
+            {resuming ? (
+              <>
+                Let&rsquo;s finish
+                <br />
+                signing you up.
+              </>
+            ) : (
+              <>
+                Let&rsquo;s get you
+                <br />
+                on the road.
+              </>
+            )}
           </h1>
           <p className="mt-3 text-[16px] text-ink-soft leading-relaxed">
-            Start with the basics. School and vehicle details come next — about two minutes in total.
+            {resuming
+              ? 'Your account exists — one step did not save last time. Confirm your details and we will pick up where it stopped.'
+              : 'Start with the basics. School and vehicle details come next — about two minutes in total.'}
           </p>
+
+          {/* Named explicitly, because the alternative is a rider staring at a
+              form they know they already filled in, with an email the app
+              insists is taken. */}
+          {resuming && (
+            <div className="mt-5 flex gap-3 rounded-2xl border border-iris/30 bg-iris/10 px-4 py-3.5">
+              <Info className="w-5 h-5 shrink-0 text-iris mt-px" strokeWidth={2.2} aria-hidden />
+              <p className="text-[13.5px] leading-relaxed text-ink-soft">
+                You are signed in as{' '}
+                <span className="font-bold text-ink">{firebaseUser?.email}</span>. Nothing is charged and no
+                second account is created.
+              </p>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="mt-9 space-y-4" noValidate>
             <div className="grid grid-cols-2 gap-3">
@@ -147,7 +256,7 @@ export default function SignupScreen() {
 
             <div className="pt-2">
               <Button type="submit" variant="volt" size="lg" fullWidth loading={busy} iconRight={ArrowRight}>
-                Continue
+                {resuming ? 'Finish signing up' : 'Continue'}
               </Button>
             </div>
 

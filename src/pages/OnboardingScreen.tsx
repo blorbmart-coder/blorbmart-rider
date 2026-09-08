@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import toast from 'react-hot-toast'
@@ -12,7 +12,7 @@ import {
   Power,
   ShieldCheck,
 } from 'lucide-react'
-import { riderApi, errorMessage, type OnboardingStep, type VehicleType } from '../lib/api'
+import { riderApi, errorMessage, type OnboardingStep, type University, type VehicleType } from '../lib/api'
 import { useRider } from '../contexts/RiderContext'
 import { Button, Field, IconBadge, SelectField, cn } from '../components/ui'
 import { BurstScene, GlowField } from '../components/art'
@@ -64,7 +64,7 @@ export default function OnboardingScreen() {
     : 'campus'
   const stepIndex = Math.max(0, ORDER.indexOf(current))
 
-  const [school, setSchool] = useState(rider?.campus?.school ?? '')
+  const [universityId, setUniversityId] = useState(rider?.campus?.universityId ?? '')
   const [department, setDepartment] = useState(rider?.campus?.department ?? '')
   const [level, setLevel] = useState(rider?.campus?.level ?? '')
   const [matricNumber, setMatricNumber] = useState(rider?.campus?.matricNumber ?? '')
@@ -76,6 +76,30 @@ export default function OnboardingScreen() {
   const [idNumber, setIdNumber] = useState('')
 
   const [fieldError, setFieldError] = useState<string | null>(null)
+
+  /**
+   * The campus list comes from the backend, never from a constant in here.
+   *
+   * There is no offline fallback on purpose. If this request cannot complete,
+   * neither can the request that saves the step — so a baked-in list would buy
+   * nothing except the chance to show a school the server would then reject.
+   */
+  const [campuses, setCampuses] = useState<University[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    riderApi
+      .universities()
+      .then((catalog) => {
+        if (!cancelled) setCampuses(catalog.universities)
+      })
+      .catch(() => {
+        if (!cancelled) setFieldError('Could not load the school list. Check your connection and retry.')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const save = async (step: OnboardingStep, payload: Record<string, unknown>) => {
     setBusy(true)
@@ -179,13 +203,36 @@ export default function OnboardingScreen() {
               </p>
 
               <div className="mt-8 space-y-4">
-                <Field
+                {/* A picker, not a text box. The school a rider types has to
+                    match the school a vendor tagged their store with for an
+                    order ever to reach them, and free text guarantees it will
+                    not: "LAUTECH", "Lautech Ogbomoso" and "ladoke akintola"
+                    are three campuses as far as an equality filter is
+                    concerned. */}
+                <SelectField
                   label="School"
-                  placeholder="e.g. Osun State University"
-                  value={school}
-                  onChange={(event) => setSchool(event.target.value)}
+                  value={universityId}
+                  onChange={(event) => setUniversityId(event.target.value)}
                   error={fieldError ?? undefined}
-                />
+                  disabled={campuses.length === 0}
+                >
+                  <option value="">
+                    {campuses.length === 0 ? 'Loading schools…' : 'Select your school'}
+                  </option>
+                  {campuses.map((campus) => (
+                    <option key={campus.id} value={campus.id}>
+                      {campus.name}
+                      {campus.shortName && campus.shortName !== campus.name ? ` (${campus.shortName})` : ''}
+                    </option>
+                  ))}
+                </SelectField>
+
+                {/* Riders are dispatched from one campus, so there is no
+                    bills-only option here as there is for buyers. Saying so
+                    beats letting somebody hunt the list for their school. */}
+                <p className="text-[13px] text-ink-faint leading-relaxed -mt-1">
+                  Only the campuses we deliver on are listed. We add more as we open them.
+                </p>
                 <Field
                   label="Department (optional)"
                   placeholder="e.g. Computer Science"
@@ -215,8 +262,8 @@ export default function OnboardingScreen() {
                   fullWidth
                   loading={busy}
                   iconRight={ArrowRight}
-                  disabled={school.trim().length < 2}
-                  onClick={() => save('campus', { school, department, level, matricNumber })}
+                  disabled={!universityId}
+                  onClick={() => save('campus', { universityId, department, level, matricNumber })}
                 >
                   Continue
                 </Button>

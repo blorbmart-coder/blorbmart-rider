@@ -47,6 +47,24 @@ export interface SourcingProgress {
   deliveriesToNextTier: number | null
 }
 
+export interface University {
+  id: string
+  name: string
+  shortName: string
+  state: string | null
+  city: string | null
+  /** The "my school is not listed" option, which opens the bills-only app. */
+  billsOnly: boolean
+  description?: string
+}
+
+export interface UniversityCatalog {
+  universities: University[]
+  billsOnly: University
+  /** Campuses in display order with the bills-only option appended last. */
+  options: University[]
+}
+
 export interface Rider {
   uid: string
   firstName?: string
@@ -54,7 +72,14 @@ export interface Rider {
   displayName?: string
   email?: string | null
   phone?: string | null
-  campus?: { school: string; department?: string | null; level?: string | null; matricNumber?: string | null } | null
+  campus?: {
+    school: string
+    /** Canonical campus id from the registry — the value orders are matched on. */
+    universityId?: string | null
+    department?: string | null
+    level?: string | null
+    matricNumber?: string | null
+  } | null
   vehicleType?: VehicleType | null
   plateNumber?: string | null
   documents?: { idType: string; idNumber: string } | null
@@ -214,8 +239,21 @@ export interface Withdrawal {
 const unwrap = <T,>(promise: Promise<{ data: { data: T } }>) => promise.then((res) => res.data.data)
 
 export const riderApi = {
+  /**
+   * Given its own, longer timeout.
+   *
+   * This is the first request a new rider's device ever makes, and it lands on
+   * a host that idles down when nobody is ordering. A cold start there
+   * regularly runs past the 30s default — and a timeout here is expensive in a
+   * way a timeout anywhere else is not, because the Firebase account has
+   * already been created by the time it fires. Waiting a minute is strictly
+   * better than stranding somebody mid-signup.
+   */
   register: (body: { firstName: string; lastName: string; phone: string; referralCode?: string }) =>
-    unwrap<Rider>(api.post('/api/rider/register', body)),
+    unwrap<Rider>(api.post('/api/rider/register', body, { timeout: 60000 })),
+
+  universities: () =>
+    unwrap<UniversityCatalog>(api.get('/api/platform/universities', { timeout: 20000 })),
 
   me: () => unwrap<{ rider: Rider; wallet: Pick<RiderWallet, 'availableBalance' | 'cashOutstanding' | 'totalEarned' | 'pinSet'> }>(
     api.get('/api/rider/me'),
