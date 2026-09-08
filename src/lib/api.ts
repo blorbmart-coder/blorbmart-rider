@@ -253,7 +253,7 @@ export const riderApi = {
     unwrap<Rider>(api.post('/api/rider/register', body, { timeout: 60000 })),
 
   universities: () =>
-    unwrap<UniversityCatalog>(api.get('/api/platform/universities', { timeout: 20000 })),
+    unwrap<UniversityCatalog>(api.get('/api/universities', { timeout: 20000 })),
 
   me: () => unwrap<{ rider: Rider; wallet: Pick<RiderWallet, 'availableBalance' | 'cashOutstanding' | 'totalEarned' | 'pinSet'> }>(
     api.get('/api/rider/me'),
