@@ -20,6 +20,7 @@ import {
   Utensils,
 } from 'lucide-react'
 import { riderApi, errorMessage, type Delivery } from '../lib/api'
+import { usePresence, TRIP_HEARTBEAT_MS } from '../hooks/usePresence'
 import { Button, Card, Chip, IconBadge, Money, Sheet, Skeleton, cn, tap } from '../components/ui'
 import { BurstScene, GlowField } from '../components/art'
 import { countdown, directionsUrl, secondsUntil, telUrl } from '../lib/format'
@@ -182,6 +183,18 @@ export default function DeliveryScreen() {
     enabled: Boolean(id),
   })
 
+  /**
+   * The beat that drives the customer's live ETA.
+   *
+   * The dashboard's presence beat stops mattering here — a rider on a job
+   * spends the whole trip on this screen, and without a beat of its own the
+   * customer's ETA would freeze at whatever it was when the rider opened it.
+   * It runs only from pickup onward, which is the same window the backend
+   * publishes tracking for.
+   */
+  const carrying = delivery?.status === 'picked_up' || delivery?.status === 'on_the_way'
+  const { coords } = usePresence({ online: carrying, intervalMs: TRIP_HEARTBEAT_MS })
+
   const [unlockIn, setUnlockIn] = useState(0)
   useEffect(() => {
     if (!delivery) return
@@ -275,7 +288,7 @@ export default function DeliveryScreen() {
           label: 'On my way',
           icon: Navigation,
           variant: 'iris' as const,
-          run: () => run('otw', () => riderApi.onTheWay(id)),
+          run: () => run('otw', () => riderApi.onTheWay(id, coords)),
           key: 'otw',
         }
       case 'on_the_way':

@@ -4,6 +4,16 @@ import { riderApi } from '../lib/api'
 const HEARTBEAT_MS = 90_000
 
 /**
+ * The cadence while a rider is actually carrying an order.
+ *
+ * The customer is watching an ETA that only moves when a beat lands, so the
+ * idle 90s would show them a number a minute and a half stale. Each beat is
+ * one small request; the backend decides on its own when a beat is worth a
+ * billed route lookup, so raising this rate does not raise the routing bill.
+ */
+export const TRIP_HEARTBEAT_MS = 20_000
+
+/**
  * Keeps an online rider reachable by dispatch.
  *
  * The backend only offers work to riders whose last heartbeat is recent. That
@@ -21,7 +31,13 @@ const HEARTBEAT_MS = 90_000
  * Location is best-effort. A rider who declines the permission still gets
  * work; they simply cannot be sorted by distance.
  */
-export function usePresence({ online }: { online: boolean }) {
+export function usePresence({
+  online,
+  intervalMs = HEARTBEAT_MS,
+}: {
+  online: boolean
+  intervalMs?: number
+}) {
   const [coords, setCoords] = useState<GeolocationCoordinates | null>(null)
   const [locationDenied, setLocationDenied] = useState(false)
   const coordsRef = useRef<GeolocationCoordinates | null>(null)
@@ -59,7 +75,7 @@ export function usePresence({ online }: { online: boolean }) {
     }
 
     beat()
-    const interval = window.setInterval(beat, HEARTBEAT_MS)
+    const interval = window.setInterval(beat, intervalMs)
 
     const onVisible = () => {
       if (document.visibilityState === 'visible') beat()
@@ -70,7 +86,7 @@ export function usePresence({ online }: { online: boolean }) {
       window.clearInterval(interval)
       document.removeEventListener('visibilitychange', onVisible)
     }
-  }, [online])
+  }, [online, intervalMs])
 
   return { coords, locationDenied }
 }

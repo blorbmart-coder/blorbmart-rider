@@ -1,7 +1,23 @@
 import axios, { AxiosError } from 'axios'
 import { auth } from './firebase'
 
-export const BASE_URL = import.meta.env.VITE_API_URL ?? 'https://blorbmart-tr1i.onrender.com'
+const FALLBACK_API_URL = 'https://blorbmart-tr1i.onrender.com'
+
+/**
+ * The API host.
+ *
+ * `??` is deliberately not used here. A hosting dashboard holding
+ * `VITE_API_URL` with an empty value builds to an empty string, not
+ * `undefined` — so `??` keeps it, axios reads '' as "same origin", and every
+ * call lands on the static host serving this app instead of the backend.
+ * That host answers 404 to /api/* with no JSON body, which is precisely the
+ * 404-without-a-message case handled below: riders were told to contact
+ * support while the backend was healthy the whole time. Blank means unset.
+ */
+const configuredApiUrl = import.meta.env.VITE_API_URL?.trim()
+export const BASE_URL = configuredApiUrl
+  ? configuredApiUrl.replace(/[/]+$/, '')
+  : FALLBACK_API_URL
 
 const api = axios.create({ baseURL: BASE_URL, timeout: 30000 })
 
@@ -301,7 +317,16 @@ export const riderApi = {
   claimSourcing: (id: string) => unwrap<Delivery>(api.post(`/api/rider/deliveries/${id}/claim-sourcing`)),
   confirmPaid: (id: string) => unwrap<Delivery>(api.post(`/api/rider/deliveries/${id}/paid`)),
   pickup: (id: string) => unwrap<Delivery>(api.post(`/api/rider/deliveries/${id}/pickup`)),
-  onTheWay: (id: string) => unwrap<Delivery>(api.post(`/api/rider/deliveries/${id}/on-the-way`)),
+  // The position rides along so the customer has a real ETA the instant they
+  // are told the rider left, rather than an empty panel until the next beat.
+  onTheWay: (id: string, location?: GeolocationCoordinates | null) =>
+    unwrap<Delivery>(
+      api.post(`/api/rider/deliveries/${id}/on-the-way`, {
+        location: location
+          ? { latitude: location.latitude, longitude: location.longitude }
+          : null,
+      }),
+    ),
   deliver: (id: string, pin: string) =>
     unwrap<{ verified: boolean; settlement: { earnings: number; reimbursement: number; totalCredited: number } }>(
       api.post(`/api/rider/deliveries/${id}/deliver`, { pin }),
