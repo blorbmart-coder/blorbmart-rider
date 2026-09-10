@@ -9,7 +9,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
+      includeAssets: ['favicon.svg', 'favicon.ico', 'icons/apple-touch-icon.png'],
       manifest: {
         name: 'Blorbmart Rider',
         short_name: 'Blorb Rider',
@@ -39,6 +39,10 @@ export default defineConfig({
         // still gets the interface and a clear "you are offline" state, rather
         // than the browser's dinosaur.
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // The 4500px source artwork. The app draws the mark inline and the
+        // icons are rendered from these, so nothing loads them — precaching
+        // them would spend ~270KB of a rider's data on every install.
+        globIgnores: ['**/icons/full-logo.png', '**/icons/shortlogo.png'],
         navigateFallback: '/index.html',
         // Firebase and the API must never be served from a cache. A stale
         // job board would have riders racing for orders that were delivered

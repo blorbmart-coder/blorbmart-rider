@@ -15,7 +15,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { Button, Money, cn } from '../components/ui'
-import { BoltMark, GlowField, StepBadge, Wordmark } from '../components/art'
+import { BrandMark, GlowField, StepBadge, Wordmark } from '../components/art'
 import { money } from '../lib/format'
 
 /**
@@ -351,7 +351,7 @@ export default function JoinScreen() {
               variants={fadeUp}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-volt/12 border border-volt/30 text-volt text-[10px] font-bold uppercase tracking-[0.12em]"
             >
-              <BoltMark className="w-3 h-3" />
+              <BrandMark className="w-3 h-3" />
               Blorbmart is powering students
             </motion.span>
 
@@ -604,8 +604,8 @@ export default function JoinScreen() {
 
         <div className="relative">
           <motion.div variants={fadeUp} className="flex justify-center mb-6">
-            <span className="w-14 h-14 rounded-[18px] bg-volt flex items-center justify-center shadow-[0_16px_44px_-16px_rgba(175,255,0,0.9)]">
-              <BoltMark className="w-6 h-6 text-void" />
+            <span className="w-14 h-14 rounded-[18px] bg-surface border border-line lit flex items-center justify-center shadow-[0_16px_44px_-16px_rgba(175,255,0,0.5)]">
+              <BrandMark className="w-7 h-7" />
             </span>
           </motion.div>
 

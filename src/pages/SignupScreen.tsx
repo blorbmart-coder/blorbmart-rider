@@ -14,7 +14,7 @@ import { auth } from '../lib/firebase'
 import { riderApi, errorMessage } from '../lib/api'
 import { useRider } from '../contexts/RiderContext'
 import { Button, Field } from '../components/ui'
-import { BoltMark, GlowField } from '../components/art'
+import { BrandMark, GlowField } from '../components/art'
 
 const schema = z.object({
   firstName: z.string().trim().min(2, 'Your first name, please'),
@@ -170,8 +170,8 @@ export default function SignupScreen() {
         </header>
 
         <main className="px-5 pt-6 pb-12">
-          <div className="w-14 h-14 rounded-[18px] bg-volt flex items-center justify-center mb-7 shadow-[0_14px_40px_-16px_rgba(175,255,0,0.9)]">
-            <BoltMark className="w-6 h-6 text-void" />
+          <div className="w-14 h-14 rounded-[18px] bg-surface border border-line lit flex items-center justify-center mb-7 shadow-[0_14px_40px_-16px_rgba(175,255,0,0.5)]">
+            <BrandMark className="w-7 h-7" />
           </div>
 
           <h1 className="font-display text-[38px] leading-[1.02] font-bold tracking-[-0.04em]">

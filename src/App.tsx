@@ -6,7 +6,7 @@ import { lazy, Suspense, type ReactNode } from 'react'
 import { RiderProvider, useRider } from './contexts/RiderContext'
 import AppShell from './components/AppShell'
 import { Button, IconBadge } from './components/ui'
-import { BoltMark, GlowField } from './components/art'
+import { BrandMark, GlowField } from './components/art'
 
 /*
  * Routes are split so the first paint downloads one screen, not nine.
@@ -50,8 +50,8 @@ function Splash() {
   return (
     <div className="relative min-h-screen bg-void flex items-center justify-center overflow-hidden">
       <GlowField tone="mixed" />
-      <div className="relative w-16 h-16 rounded-[20px] bg-volt flex items-center justify-center breathe">
-        <BoltMark className="w-7 h-7 text-void" />
+      <div className="relative w-16 h-16 rounded-[20px] bg-surface border border-line lit flex items-center justify-center breathe">
+        <BrandMark className="w-8 h-8" />
       </div>
     </div>
   )

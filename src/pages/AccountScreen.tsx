@@ -15,7 +15,7 @@ import { riderApi } from '../lib/api'
 import { useRider } from '../contexts/RiderContext'
 import { useInstalled } from '../hooks/usePresence'
 import { Button, Card, Chip, IconBadge, Money, ProgressBar, Row } from '../components/ui'
-import { BoltMark, GlowField } from '../components/art'
+import { BrandMark, GlowField } from '../components/art'
 import { initials, money } from '../lib/format'
 
 const VEHICLE_LABEL: Record<string, string> = {
@@ -45,8 +45,8 @@ export default function AccountScreen() {
               {initials(rider?.displayName)}
             </div>
             {rider?.status === 'active' && (
-              <span className="absolute -bottom-1 -right-1 w-7 h-7 rounded-xl bg-volt flex items-center justify-center border-[3px] border-void">
-                <BoltMark className="w-3 h-3 text-void" />
+              <span className="absolute -bottom-1 -right-1 w-7 h-7 rounded-xl bg-surface flex items-center justify-center border-[3px] border-void">
+                <BrandMark className="w-3.5 h-3.5" />
               </span>
             )}
           </div>
@@ -186,7 +186,7 @@ export default function AccountScreen() {
         </Button>
 
         <div className="flex items-center justify-center gap-2 pt-3 pb-4 text-ink-faint">
-          <BoltMark className="w-3 h-3" />
+          <BrandMark className="w-3.5 h-3.5" />
           <p className="text-[12px] font-semibold">Blorbmart · Powering students</p>
         </div>
       </main>
