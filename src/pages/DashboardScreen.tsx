@@ -34,6 +34,28 @@ const greeting = () => {
   return 'Late shift'
 }
 
+/**
+ * The earnings call failed. A shimmer that never resolves reads as a broken
+ * screen, so this shows ₦0 greyed out, says it is not confirmed, and retries
+ * on tap.
+ */
+function EarningsUnavailable({ onRetry }: { onRetry: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        // The Wallet card is itself a link to /earnings.
+        e.stopPropagation()
+        onRetry()
+      }}
+      className="block text-left"
+    >
+      <Money amount={0} size="lg" tone="faint" />
+      <p className="text-[12px] text-ember font-semibold mt-1.5">Couldn't load · tap to retry</p>
+    </button>
+  )
+}
+
 export default function DashboardScreen() {
   const navigate = useNavigate()
   const { rider, setRider } = useRider()
@@ -44,11 +66,16 @@ export default function DashboardScreen() {
   const { coords, locationDenied } = usePresence({ online })
   const { offers, loading: offersLoading } = useLiveOffers({ enabled: online })
 
-  const { data: earnings } = useQuery({
+  const {
+    data: earnings,
+    isError: earningsFailed,
+    refetch: refetchEarnings,
+  } = useQuery({
     queryKey: ['earnings'],
     queryFn: riderApi.earnings,
     refetchInterval: 60_000,
   })
+  const retryEarnings = () => void refetchEarnings()
 
   const { data: active, refetch: refetchActive } = useQuery({
     queryKey: ['active-delivery'],
@@ -242,6 +269,8 @@ export default function DashboardScreen() {
                   {earnings.deliveriesToday} deliver{earnings.deliveriesToday === 1 ? 'y' : 'ies'}
                 </p>
               </>
+            ) : earningsFailed ? (
+              <EarningsUnavailable onRetry={retryEarnings} />
             ) : (
               <Skeleton className="h-7 w-24" />
             )}
@@ -259,6 +288,8 @@ export default function DashboardScreen() {
                   Cash out <ArrowRight className="w-3 h-3" aria-hidden />
                 </p>
               </>
+            ) : earningsFailed ? (
+              <EarningsUnavailable onRetry={retryEarnings} />
             ) : (
               <Skeleton className="h-7 w-24" />
             )}
