@@ -1,0 +1,14 @@
+# rider.blorbmart.com.ng — Blorbmart Rider.
+# The recruitment page and the sign-up and sign-in forms are public; the job
+# board, earnings and deliveries belong to a signed-in rider.
+User-agent: *
+Allow: /join
+Allow: /signup
+Allow: /login
+Disallow: /earnings
+Disallow: /history
+Disallow: /account
+Disallow: /delivery/
+Disallow: /onboarding
+
+Sitemap: https://rider.blorbmart.com.ng/sitemap.xml

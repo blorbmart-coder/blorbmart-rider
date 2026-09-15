@@ -167,7 +167,7 @@ export default function AccountScreen() {
             label="Get help"
             tone="neutral"
             onClick={() => {
-              window.location.href = 'mailto:support@blorbmart.shop?subject=Rider%20support'
+              window.location.href = 'mailto:blorbmarthelpdesk@gmail.com?subject=Rider%20support'
             }}
           />
         </Card>

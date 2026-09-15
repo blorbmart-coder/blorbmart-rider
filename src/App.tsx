@@ -2,11 +2,19 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import { Clock } from 'lucide-react'
-import { lazy, Suspense, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, type ReactNode } from 'react'
 import { RiderProvider, useRider } from './contexts/RiderContext'
 import AppShell from './components/AppShell'
 import { Button, IconBadge } from './components/ui'
 import { BrandMark, GlowField } from './components/art'
+import { applyRouteMeta } from './lib/seo'
+
+/** Keeps the title, canonical URL and robots rule in step with the route. */
+function RouteMeta() {
+  const { pathname } = useLocation()
+  useEffect(() => applyRouteMeta(pathname), [pathname])
+  return null
+}
 
 /*
  * Routes are split so the first paint downloads one screen, not nine.
@@ -222,6 +230,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <RiderProvider>
         <BrowserRouter>
+          <RouteMeta />
           <Suspense fallback={<Splash />}>
             <AppRoutes />
           </Suspense>
