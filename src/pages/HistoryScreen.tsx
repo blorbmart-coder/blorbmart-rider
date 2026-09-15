@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
-import { HandCoins, MapPin, Store, XCircle } from 'lucide-react'
-import { riderApi, type Delivery } from '../lib/api'
-import { Card, Chip, EmptyState, IconBadge, Money, Skeleton } from '../components/ui'
+import { HandCoins, MapPin, RotateCw, Store, XCircle } from 'lucide-react'
+import { errorMessage, riderApi, type Delivery } from '../lib/api'
+import { Button, Card, Chip, EmptyState, IconBadge, Money, Skeleton } from '../components/ui'
 import { GlowField, RouteScene } from '../components/art'
 import { timeAgo } from '../lib/format'
 
@@ -57,7 +57,14 @@ function DeliveryRow({ delivery }: { delivery: Delivery }) {
 }
 
 export default function HistoryScreen() {
-  const { data: deliveries, isLoading } = useQuery({
+  const {
+    data: deliveries,
+    isLoading,
+    isError,
+    error,
+    isFetching,
+    refetch,
+  } = useQuery({
     queryKey: ['deliveries'],
     queryFn: () => riderApi.deliveries(50),
   })
@@ -100,6 +107,19 @@ export default function HistoryScreen() {
               <Skeleton className="h-14" />
               <Skeleton className="h-14" />
             </div>
+          ) : isError && !deliveries ? (
+            // The request failed. "No deliveries yet" here would tell a rider
+            // their record is gone (QA-BM-WEB-003, issue 1) — say what happened.
+            <EmptyState
+              art={<RouteScene className="w-full" />}
+              title="We couldn't load your history"
+              message={errorMessage(error, 'Check your connection and try again.')}
+              action={
+                <Button variant="volt" icon={RotateCw} loading={isFetching} onClick={() => void refetch()}>
+                  Try again
+                </Button>
+              }
+            />
           ) : !deliveries?.length ? (
             <EmptyState
               art={<RouteScene className="w-full" />}
