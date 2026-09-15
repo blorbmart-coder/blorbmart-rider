@@ -121,7 +121,9 @@ const PHOTOS = {
  * hit in their first week is a refund request and a bad review, so the figure
  * here is the floor rather than the ceiling.
  */
-const AVG_EARNING_PER_DELIVERY = 480
+// 90% of a typical ₦600 delivery fee — the rider's share since 2026-09-15
+// (revenuePolicy on the backend). The landing page quotes the same figure.
+const AVG_EARNING_PER_DELIVERY = 540
 
 function EarningsCalculator() {
   const [perDay, setPerDay] = useState(4)
