@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { firestore } from '../lib/firestore'
-import { riderApi, type Offer } from '../lib/api'
+import { errorMessage, riderApi, type Offer } from '../lib/api'
 
 /**
  * The live job board.
@@ -31,9 +31,15 @@ export function useLiveOffers({ enabled }: { enabled: boolean }) {
   const enrichTimer = useRef<number | null>(null)
 
   const refresh = useCallback(async () => {
-    const result = await riderApi.offers()
-    setOffers(result.offers)
-    return result
+    try {
+      const result = await riderApi.offers()
+      setOffers(result.offers)
+      setError(null)
+      return result
+    } catch (err) {
+      setError(errorMessage(err, 'Could not load jobs.'))
+      throw err
+    }
   }, [])
 
   useEffect(() => {
@@ -49,14 +55,23 @@ export function useLiveOffers({ enabled }: { enabled: boolean }) {
           setOffers(result.offers)
           setError(null)
         }
-      } catch {
-        // The board is still usable from the previous fetch. A failed
-        // enrichment costs the rider the cash-front button, not the job list,
-        // so it does not warrant an error screen.
+      } catch (err) {
+        // Kept, and shown only on an empty board. With jobs already on
+        // screen, a failed refresh costs the rider the cash-front button, not
+        // the list. On an empty board it is the only explanation they get —
+        // "awaiting approval" or a server error must not read as "no orders
+        // right now", which is how a broken board passed for a quiet one.
+        if (!cancelled) setError(errorMessage(err, 'Could not load jobs.'))
       } finally {
         if (!cancelled) setLoading(false)
       }
     }
+
+    // A backstop for the listener. When the listener fails — a rules change,
+    // a network that drops the socket — the board would otherwise only ever
+    // show what the first fetch found, and a rider could sit "listening"
+    // beside a ready order.
+    const poll = window.setInterval(() => void enrich(), 20_000)
 
     const start = async () => {
       void enrich()
@@ -64,11 +79,11 @@ export function useLiveOffers({ enabled }: { enabled: boolean }) {
       const { db, sdk } = await firestore()
       if (cancelled) return
 
-      const q = sdk.query(
-        sdk.collection(db, 'deliveryOffers'),
-        sdk.where('status', '==', 'open'),
-        sdk.orderBy('createdAt', 'desc'),
-      )
+      // Unsorted on purpose. The snapshot only says that something changed;
+      // the list itself, in order, comes from the API. An orderBy here needs
+      // a composite index, and without one the listener errors and the board
+      // stops updating.
+      const q = sdk.query(sdk.collection(db, 'deliveryOffers'), sdk.where('status', '==', 'open'))
 
       unsubscribe = sdk.onSnapshot(
         q,
@@ -79,7 +94,9 @@ export function useLiveOffers({ enabled }: { enabled: boolean }) {
           enrichTimer.current = window.setTimeout(() => void enrich(), 250)
         },
         (err) => {
-          if (!cancelled) setError(err.message)
+          // Not shown to the rider: the poll above keeps the board current,
+          // and a raw Firestore message is nothing they can act on.
+          console.warn('[offers] live listener stopped:', err.message)
         },
       )
     }
@@ -88,6 +105,7 @@ export function useLiveOffers({ enabled }: { enabled: boolean }) {
 
     return () => {
       cancelled = true
+      window.clearInterval(poll)
       if (enrichTimer.current) window.clearTimeout(enrichTimer.current)
       unsubscribe?.()
     }

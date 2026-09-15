@@ -64,7 +64,12 @@ export default function DashboardScreen() {
 
   const online = Boolean(rider?.isAvailable)
   const { coords, locationDenied } = usePresence({ online })
-  const { offers, loading: offersLoading } = useLiveOffers({ enabled: online })
+  const {
+    offers,
+    loading: offersLoading,
+    error: offersError,
+    refresh: refreshOffers,
+  } = useLiveOffers({ enabled: online })
 
   const {
     data: earnings,
@@ -367,6 +372,21 @@ export default function DashboardScreen() {
               <Skeleton className="h-44 rounded-[var(--radius-card)]" />
               <Skeleton className="h-44 rounded-[var(--radius-card)]" />
             </div>
+          ) : offers.length === 0 && offersError ? (
+            // The jobs call failed. "Scanning" here would tell a rider there
+            // is no work while a ready order waits — say what went wrong.
+            <Card variant="solid">
+              <EmptyState
+                art={<RadarScene className="w-full" />}
+                title="We can't see the board"
+                message={offersError}
+                action={
+                  <Button variant="volt" onClick={() => void refreshOffers().catch(() => undefined)}>
+                    Try again
+                  </Button>
+                }
+              />
+            </Card>
           ) : offers.length === 0 ? (
             <Card variant="solid">
               <EmptyState
