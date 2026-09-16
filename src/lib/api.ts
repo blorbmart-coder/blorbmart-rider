@@ -196,6 +196,12 @@ export interface Delivery {
   }
   cashToPay: number
   cashPaidAmount: number
+  /**
+   * Whether the restaurant has taken this order on, read live from the order
+   * rather than from a flag written when the job was broadcast. The cash offer
+   * is only honest while this is false.
+   */
+  vendorAccepted: boolean
   sourcingUnlocksAt: string | null
   settledAmount?: number
   settledEarnings?: number

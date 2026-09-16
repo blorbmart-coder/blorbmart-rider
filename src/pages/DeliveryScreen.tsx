@@ -11,6 +11,7 @@ import {
   Bike,
   Check,
   CheckCircle2,
+  ChefHat,
   HandCoins,
   Navigation,
   Phone,
@@ -18,6 +19,7 @@ import {
   Store,
   Timer,
   Utensils,
+  X,
 } from 'lucide-react'
 import { riderApi, errorMessage, type Delivery } from '../lib/api'
 import { usePresence, TRIP_HEARTBEAT_MS } from '../hooks/usePresence'
@@ -51,27 +53,61 @@ const STEPS: Step[] = [
   { key: 'delivered', label: 'Done' },
 ]
 
-const stepIndexFor = (status: Delivery['status']) => {
-  if (status === 'assigned') return 0
-  if (status === 'at_store' || status === 'paid_vendor') return 1
-  if (status === 'picked_up' || status === 'on_the_way') return 2
-  return 3
+/**
+ * How far along the rail this status sits, and whether it got there.
+ *
+ * A released delivery used to fall through to the last step, so the rail drew
+ * Head over, Collect and Deliver as ticked and lit "Done" — a rider who had
+ * just told us they could not finish the job was shown the job finished. The
+ * status is now matched explicitly, and anything that ended without a drop-off
+ * stops where it stopped and is drawn as a stop, not a tick.
+ */
+const progressFor = (delivery: Delivery): { active: number; failed: boolean } => {
+  switch (delivery.status) {
+    case 'assigned':
+      return { active: 0, failed: false }
+    case 'at_store':
+    case 'paid_vendor':
+      return { active: 1, failed: false }
+    case 'picked_up':
+    case 'on_the_way':
+      return { active: 2, failed: false }
+    case 'delivered':
+      return { active: 3, failed: false }
+    default:
+      // Released, expired, or any status a later server adds. The rail shows
+      // how far the rider actually got: the last step they completed, with
+      // the one after it marked as the point it stopped.
+      return { active: lastReachedStep(delivery), failed: true }
+  }
+}
+
+/**
+ * The furthest step a cancelled job reached, read from what the rider did
+ * rather than from the status that replaced it. Cash handed over or a pickup
+ * recorded both leave a trace on the delivery.
+ */
+const lastReachedStep = (delivery: Delivery) => {
+  if (delivery.deliveredAt) return 3
+  if (Number(delivery.cashPaidAmount || 0) > 0) return 2
+  return 1
 }
 
 /** The four steps as a rail of connected dots. */
-function StepRail({ active }: { active: number }) {
+function StepRail({ active, failed }: { active: number; failed: boolean }) {
   return (
     <ol className="flex items-start">
       {STEPS.map((step, index) => {
         const done = index < active
         const here = index === active
+        const stopped = here && failed
         return (
           <li key={step.key} className="flex-1 flex flex-col items-center gap-2 relative">
             {index > 0 && (
               <span
                 className={cn(
                   'absolute top-[11px] right-1/2 left-[-50%] h-[2px] rounded-full transition-colors duration-500',
-                  index <= active ? 'bg-volt' : 'bg-line',
+                  index > active ? 'bg-line' : stopped ? 'bg-ember' : 'bg-volt',
                 )}
                 aria-hidden
               />
@@ -79,12 +115,15 @@ function StepRail({ active }: { active: number }) {
             <span
               className={cn(
                 'relative w-[23px] h-[23px] rounded-full flex items-center justify-center transition-all duration-300',
-                done && 'bg-volt text-void',
-                here && 'bg-volt text-void scale-110 shadow-[0_0_18px_-2px_rgba(175,255,0,0.75)]',
+                stopped && 'bg-ember text-white scale-110 shadow-[0_0_18px_-2px_rgba(255,85,0,0.7)]',
+                !stopped && done && 'bg-volt text-void',
+                !stopped && here && 'bg-volt text-void scale-110 shadow-[0_0_18px_-2px_rgba(175,255,0,0.75)]',
                 !done && !here && 'bg-raised border-2 border-line',
               )}
             >
-              {done ? (
+              {stopped ? (
+                <X className="w-3 h-3" strokeWidth={3.5} aria-hidden />
+              ) : done ? (
                 <Check className="w-3 h-3" strokeWidth={3.5} aria-hidden />
               ) : here ? (
                 <span className="w-2 h-2 rounded-full bg-void" aria-hidden />
@@ -93,10 +132,10 @@ function StepRail({ active }: { active: number }) {
             <span
               className={cn(
                 'text-[10px] font-bold uppercase tracking-[0.06em] transition-colors text-center',
-                index <= active ? 'text-ink' : 'text-ink-faint',
+                stopped ? 'text-ember-light' : index <= active ? 'text-ink' : 'text-ink-faint',
               )}
             >
-              {step.label}
+              {stopped ? 'Stopped' : step.label}
             </span>
           </li>
         )
@@ -246,7 +285,7 @@ export default function DeliveryScreen() {
 
   const sourcing = delivery.mode === 'sourcing'
   const paid = Number(delivery.cashPaidAmount || 0) > 0
-  const activeStep = stepIndexFor(delivery.status)
+  const progress = progressFor(delivery)
   const storeDirections = directionsUrl(delivery.pickup.latitude, delivery.pickup.longitude, delivery.pickup.storeName)
   const dropDirections = directionsUrl(delivery.dropoff.latitude, delivery.dropoff.longitude, delivery.dropoff.name)
 
@@ -254,7 +293,11 @@ export default function DeliveryScreen() {
   // server re-checks this anyway; hiding it early keeps the rider from
   // tapping into a refusal.
   const canOfferSourcing =
-    !sourcing && ['assigned', 'at_store'].includes(delivery.status) && unlockIn <= 0 && delivery.cashToPay > 0
+    !sourcing &&
+    !delivery.vendorAccepted &&
+    ['assigned', 'at_store'].includes(delivery.status) &&
+    unlockIn <= 0 &&
+    delivery.cashToPay > 0
 
   /*
    * The one primary action, resolved once and rendered in one place.
@@ -346,7 +389,7 @@ export default function DeliveryScreen() {
           </div>
 
           <div className="mt-7">
-            <StepRail active={activeStep} />
+            <StepRail active={progress.active} failed={progress.failed} />
           </div>
         </div>
       </header>
@@ -388,7 +431,10 @@ export default function DeliveryScreen() {
         )}
 
         {/* ── The pay instruction ───────────────────────────────────────── */}
-        {sourcing && !paid && (
+        {/* Never on a job the rider has let go of: telling somebody to hand
+            cash over a counter for an order they are no longer carrying is
+            the most expensive thing this screen could get wrong. */}
+        {sourcing && !paid && !progress.failed && (
           <Card variant="solid" glow="ember" className="p-5">
             <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink-faint mb-2">
               Pay this at the counter
@@ -420,7 +466,7 @@ export default function DeliveryScreen() {
           </Card>
         )}
 
-        {sourcing && paid && delivery.status !== 'delivered' && (
+        {sourcing && paid && !progress.failed && delivery.status !== 'delivered' && (
           <Card variant="solid" className="p-4 border-volt/25 flex gap-3">
             <IconBadge icon={CheckCircle2} tone="volt" size="sm" />
             <div>
@@ -528,8 +574,21 @@ export default function DeliveryScreen() {
           </Card>
         )}
 
+        {/* ── The kitchen has it ────────────────────────────────────────── */}
+        {!sourcing && delivery.vendorAccepted && ['assigned', 'at_store'].includes(delivery.status) && (
+          <Card variant="solid" className="p-4 flex gap-3 border-volt/25">
+            <IconBadge icon={ChefHat} tone="volt" size="sm" />
+            <div>
+              <p className="font-bold text-[14px]">The kitchen accepted this order</p>
+              <p className="text-[13px] text-ink-soft leading-snug mt-0.5">
+                Nothing to pay for. Collect it as normal when it is ready.
+              </p>
+            </div>
+          </Card>
+        )}
+
         {/* ── Waiting on the kitchen ────────────────────────────────────── */}
-        {!sourcing && unlockIn > 0 && ['assigned', 'at_store'].includes(delivery.status) && (
+        {!sourcing && !delivery.vendorAccepted && unlockIn > 0 && ['assigned', 'at_store'].includes(delivery.status) && (
           <Card variant="solid" className="p-4 flex gap-3">
             <IconBadge icon={Timer} tone="neutral" size="sm" />
             <div>
@@ -543,12 +602,35 @@ export default function DeliveryScreen() {
           </Card>
         )}
 
-        <button
-          onClick={() => setShowCancel(true)}
-          className="w-full min-h-[44px] text-[13px] font-bold text-ink-faint cursor-pointer active:text-ink-soft transition-colors"
-        >
-          I can&rsquo;t complete this delivery
-        </button>
+        {/* ── Released ──────────────────────────────────────────────────
+            A job the rider let go of says so in words, not only in the
+            rail above it. Without this the screen reads exactly like an
+            active delivery with its buttons missing. */}
+        {progress.failed && (
+          <Card variant="solid" className="p-4 border-ember/25 flex gap-3">
+            <IconBadge icon={AlertTriangle} tone="ember" size="sm" />
+            <div>
+              <p className="font-bold text-[15px] text-ember-light">You released this delivery</p>
+              <p className="text-[13px] text-ink-soft leading-snug mt-0.5">
+                {paid
+                  ? 'It is back on the board for another rider. Support will return the cash you paid to your wallet within 24 hours.'
+                  : 'It is back on the board for another rider. Head back to the jobs list to pick up another one.'}
+              </p>
+              <Button variant="outline" size="sm" className="mt-3" onClick={() => navigate('/', { replace: true })}>
+                Find another job
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {!progress.failed && delivery.status !== 'delivered' && (
+          <button
+            onClick={() => setShowCancel(true)}
+            className="w-full min-h-[44px] text-[13px] font-bold text-ink-faint cursor-pointer active:text-ink-soft transition-colors"
+          >
+            I can&rsquo;t complete this delivery
+          </button>
+        )}
       </main>
 
       {/* ── The one primary action, pinned ─────────────────────────────────
