@@ -6,7 +6,7 @@ import { lazy, Suspense, useEffect, type ReactNode } from 'react'
 import { RiderProvider, useRider } from './contexts/RiderContext'
 import AppShell from './components/AppShell'
 import { Button, IconBadge } from './components/ui'
-import { BrandMark, GlowField } from './components/art'
+import { BrandMarkDraw, GlowField, useMarkStillDrawing } from './components/art'
 import { applyRouteMeta } from './lib/seo'
 
 /** Keeps the title, canonical URL and robots rule in step with the route. */
@@ -50,17 +50,16 @@ const queryClient = new QueryClient({
  * The splash.
  *
  * Deliberately the brand mark alone on the app's own ground, with no spinner:
- * this is on screen for a few hundred milliseconds in the good case, and a
- * spinner in that window reads as slowness that is not there. The breathing
- * opacity is enough to say the app is alive if the wait does run long.
+ * a spinner reads as slowness that is not there. The mark writes itself in,
+ * as it does on www, and the guards below hold the splash only until it is
+ * written — about a second — so a fast launch never cuts the B off
+ * mid-stroke. If the wait runs longer, the finished mark breathes.
  */
 function Splash() {
   return (
     <div className="relative min-h-screen bg-void flex items-center justify-center overflow-hidden">
       <GlowField tone="mixed" />
-      <div className="relative w-16 h-16 rounded-[20px] bg-surface border border-line lit flex items-center justify-center breathe">
-        <BrandMark className="w-8 h-8" />
-      </div>
+      <BrandMarkDraw className="relative h-16 w-[61px]" />
     </div>
   )
 }
@@ -105,8 +104,9 @@ function AwaitingApproval() {
 function Guarded({ children }: { children: ReactNode }) {
   const { firebaseUser, rider, loading, needsRegistration } = useRider()
   const location = useLocation()
+  const drawing = useMarkStillDrawing()
 
-  if (loading) return <Splash />
+  if (loading || drawing) return <Splash />
   if (!firebaseUser) return <Navigate to="/join" replace state={{ from: location }} />
   if (needsRegistration) return <Navigate to="/signup" replace />
   if (!rider) return <Splash />
@@ -139,7 +139,8 @@ function PublicOnly({ children }: { children: ReactNode }) {
 
 function OnboardingRoute() {
   const { firebaseUser, rider, loading, needsRegistration } = useRider()
-  if (loading) return <Splash />
+  const drawing = useMarkStillDrawing()
+  if (loading || drawing) return <Splash />
   if (!firebaseUser) return <Navigate to="/join" replace />
   if (needsRegistration) return <Navigate to="/signup" replace />
   if (rider?.onboardingComplete) return <Navigate to="/" replace />
@@ -219,7 +220,8 @@ function AppRoutes() {
 
 function GuardedBare({ children }: { children: ReactNode }) {
   const { firebaseUser, rider, loading } = useRider()
-  if (loading) return <Splash />
+  const drawing = useMarkStillDrawing()
+  if (loading || drawing) return <Splash />
   if (!firebaseUser) return <Navigate to="/join" replace />
   if (!rider?.onboardingComplete) return <Navigate to="/onboarding" replace />
   return <>{children}</>

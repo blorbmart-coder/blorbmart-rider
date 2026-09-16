@@ -306,6 +306,27 @@
   animation: breathe 2.6s ease-in-out infinite;
 }
 
+/* The splash mark writes itself, as it does on www: the pen traces the
+   outline, then the fill comes in behind it, then the finished mark breathes
+   for as long as the wait lasts. --mark-t puts every splash on the clock of
+   the first one (see BrandMarkDraw). */
+@keyframes mark-trace { to { stroke-dashoffset: 0; } }
+@keyframes mark-fill { to { fill-opacity: 1; } }
+@keyframes mark-breathe { 50% { opacity: 0.5; } }
+
+.mark-draw {
+  animation: mark-breathe 2.6s ease-in-out calc(1400ms + var(--mark-t, 0ms)) infinite;
+}
+
+.mark-draw path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  fill-opacity: 0;
+  animation:
+    mark-trace 950ms cubic-bezier(0.42, 0, 0.58, 1) calc(100ms + var(--mark-t, 0ms)) forwards,
+    mark-fill 450ms ease-out calc(650ms + var(--mark-t, 0ms)) forwards;
+}
+
 /* The ambient colour behind a hero panel. Slow enough never to pull the eye,
    present enough that the panel is not a flat rectangle. */
 @keyframes drift {
@@ -347,5 +368,14 @@
   .radar-ring,
   .radar-ring-delayed {
     display: none;
+  }
+
+  /* The shortened duration alone would still hold the mark invisible for
+     its delay, then snap it in. */
+  .mark-draw,
+  .mark-draw path {
+    animation: none;
+    stroke-dashoffset: 0;
+    fill-opacity: 1;
   }
 }
