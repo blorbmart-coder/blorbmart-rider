@@ -249,7 +249,17 @@ export interface Earnings {
 
 export interface WalletTransaction {
   id: string
-  type: 'delivery_earning' | 'sourcing_bonus' | 'reimbursement' | 'tip' | 'bonus' | 'adjustment' | 'debit' | 'reversal'
+  type:
+    | 'delivery_earning'
+    | 'sourcing_bonus'
+    | 'reimbursement'
+    | 'tip'
+    | 'bonus'
+    | 'adjustment'
+    | 'debit'
+    | 'reversal'
+    | 'bill_payment'
+    | 'bill_refund'
   direction: 'in' | 'out'
   amount: number
   balanceAfter: number
@@ -363,6 +373,76 @@ export const riderApi = {
   withdraw: (amount: number, pin: string) =>
     unwrap<Withdrawal>(api.post('/api/rider/wallet/withdraw', { amount, pin })),
   withdrawals: () => unwrap<Withdrawal[]>(api.get('/api/rider/wallet/withdrawals')),
+}
+
+/* ── Bills ───────────────────────────────────────────────────────────────
+   Airtime, data, electricity and TV, paid from the rider's earnings. The
+   same endpoints the customer app uses, with `payer: 'rider'`, so the
+   backend debits (and on failure refunds) this wallet, behind its PIN. */
+
+export interface BillCategory {
+  id: string
+  label: string
+}
+
+export interface BillService {
+  id: string
+  category: string
+  name: string
+  color?: string
+  /** What the form needs: phone, account, meterType, amount, variation. */
+  inputs: string[]
+  accountLabel?: string
+  min?: number
+  max?: number
+  fee: number
+}
+
+export interface BillPlan {
+  code: string
+  name: string
+  amount: number
+  /** "Daily", "Weekly", "Monthly"… on data plans; empty otherwise. */
+  periodLabel?: string
+}
+
+export interface BillPayment {
+  id: string
+  serviceName: string
+  category: string
+  amount: number
+  fee: number
+  totalAmount: number
+  phone: string
+  accountNumber: string
+  variationName: string
+  status: 'pending' | 'processing' | 'delivered' | 'failed' | 'refunded' | string
+  token: string
+  units: string
+  failureReason: string
+  createdAt: string | null
+}
+
+export const billsApi = {
+  catalog: () => unwrap<{ categories: BillCategory[]; services: BillService[] }>(api.get('/api/bills/catalog')),
+  plans: (serviceKey: string) =>
+    unwrap<{ variations: BillPlan[] }>(api.get(`/api/bills/services/${encodeURIComponent(serviceKey)}/variations`)),
+  verifyCustomer: (serviceKey: string, accountNumber: string, meterType?: string) =>
+    unwrap<{ name: string; address?: string }>(
+      api.post('/api/bills/verify-customer', { serviceKey, accountNumber, meterType }),
+    ),
+  purchase: (body: {
+    serviceKey: string
+    amount?: number
+    phone?: string
+    accountNumber?: string
+    variationCode?: string
+    meterType?: string
+    pin: string
+    idempotencyKey: string
+  }) => unwrap<BillPayment>(api.post('/api/bills/purchase', { ...body, payer: 'rider', paymentMethod: 'wallet' })),
+  history: () =>
+    unwrap<{ payments: BillPayment[] }>(api.get('/api/bills/history', { params: { payer: 'rider', limit: 10 } })),
 }
 
 export default api

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import {
@@ -13,6 +14,7 @@ import {
   Plus,
   Receipt,
   Shield,
+  Smartphone,
   Zap,
 } from 'lucide-react'
 import { riderApi, errorMessage, type WalletTransaction } from '../lib/api'
@@ -58,6 +60,8 @@ const TX_META: Record<string, { label: string; icon: typeof Banknote; tone: 'vol
   adjustment: { label: 'Adjustment', icon: Receipt, tone: 'neutral' },
   debit: { label: 'Cashed out', icon: ArrowUpRight, tone: 'neutral' },
   reversal: { label: 'Returned', icon: ArrowDownLeft, tone: 'gold' },
+  bill_payment: { label: 'Bill paid', icon: Smartphone, tone: 'neutral' },
+  bill_refund: { label: 'Bill refunded', icon: ArrowDownLeft, tone: 'gold' },
 }
 
 function TransactionRow({ transaction }: { transaction: WalletTransaction }) {
@@ -95,6 +99,7 @@ function TransactionRow({ transaction }: { transaction: WalletTransaction }) {
 
 export default function EarningsScreen() {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const [showWithdraw, setShowWithdraw] = useState(false)
   const [showBank, setShowBank] = useState(false)
   const [showPinSetup, setShowPinSetup] = useState(false)
@@ -219,6 +224,16 @@ export default function EarningsScreen() {
             onClick={startWithdraw}
           >
             Cash out
+          </Button>
+          <Button
+            variant="outline"
+            size="md"
+            fullWidth
+            className="mt-2.5"
+            icon={Smartphone}
+            onClick={() => navigate('/bills')}
+          >
+            Pay bills from your earnings
           </Button>
           {(wallet?.availableBalance ?? 0) < (wallet?.minWithdrawal ?? 500) &&
             (wallet?.availableBalance ?? 0) > 0 && (

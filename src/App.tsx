@@ -33,6 +33,7 @@ const DeliveryScreen = lazy(() => import('./pages/DeliveryScreen'))
 const EarningsScreen = lazy(() => import('./pages/EarningsScreen'))
 const HistoryScreen = lazy(() => import('./pages/HistoryScreen'))
 const AccountScreen = lazy(() => import('./pages/AccountScreen'))
+const BillsScreen = lazy(() => import('./pages/BillsScreen'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -182,6 +183,14 @@ function AppRoutes() {
         element={
           <Guarded>
             <EarningsScreen />
+          </Guarded>
+        }
+      />
+      <Route
+        path="/bills"
+        element={
+          <Guarded>
+            <BillsScreen />
           </Guarded>
         }
       />
