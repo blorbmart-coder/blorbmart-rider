@@ -404,6 +404,12 @@ export interface BillPlan {
   amount: number
   /** "Daily", "Weekly", "Monthly"… on data plans; empty otherwise. */
   periodLabel?: string
+  /** The data allowance, "1.5GB", when the provider says. */
+  size?: string
+  /** "30 days", "2 hours". */
+  validity?: string
+  /** Anything else the provider says about the plan. */
+  details?: string
 }
 
 export interface BillPayment {

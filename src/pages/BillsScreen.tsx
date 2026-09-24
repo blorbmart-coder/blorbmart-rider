@@ -7,6 +7,7 @@ import {
   BadgeCheck,
   CheckCircle2,
   Clock,
+  Info,
   Lock,
   Receipt,
   RotateCcw,
@@ -59,6 +60,21 @@ function periodsOf(plans: BillPlan[]) {
   const present = new Set(plans.map((p) => p.periodLabel).filter(Boolean) as string[])
   if (present.size < 2) return []
   return [ALL, ...PERIOD_ORDER.filter((p) => present.has(p)), ...[...present].filter((p) => !PERIOD_ORDER.includes(p))]
+}
+
+/**
+ * The two lines on a plan tile. The allowance leads when the provider gives
+ * one; otherwise the name's first chunk. Some networks name plans by price
+ * ("Daily Plan N75 — 1 day"), so the details sheet carries the full name.
+ */
+const SIZE = /(\d+(?:\.\d+)?)\s*(TB|GB|MB)\b/i
+function planLines(p: BillPlan) {
+  const match = `${p.name} ${p.details ?? ''}`.match(SIZE)
+  const size = p.size || (match ? `${match[1]}${match[2].toUpperCase()}` : '')
+  const [first, ...rest] = p.name.split(/\s*[—–-]\s*/)
+  return size
+    ? { headline: size, detail: p.validity || p.periodLabel || rest.join(' · ') }
+    : { headline: first, detail: rest.join(' · ') }
 }
 
 const needs = (service: BillService | null, input: string) => Boolean(service?.inputs.includes(input))
@@ -126,6 +142,8 @@ export default function BillsScreen() {
   const [idempotencyKey, setIdempotencyKey] = useState(newKey)
   const [result, setResult] = useState<BillPayment | null>(null)
   const [pinSetupOpen, setPinSetupOpen] = useState(false)
+  /** The plan whose full details are open. */
+  const [details, setDetails] = useState<BillPlan | null>(null)
   const [newPin, setNewPin] = useState('')
 
   const categories = catalog?.categories ?? []
@@ -377,28 +395,45 @@ export default function BillsScreen() {
                     <div className="grid grid-cols-2 gap-2.5">
                       {shownPlans.map((p) => {
                         const active = plan?.code === p.code
-                        const [headline, ...rest] = p.name.split(/\s*[—–-]\s*/)
+                        const { headline, detail } = planLines(p)
                         return (
-                          <button
-                            key={p.code}
-                            type="button"
-                            onClick={() => setPlan(p)}
-                            className={cn(
-                              'text-left rounded-2xl border p-3 min-h-[74px] transition-colors active:scale-[0.98]',
-                              active ? 'bg-volt/10 border-volt' : 'bg-raised border-line',
-                            )}
-                          >
-                            <p className="font-bold text-[14px] leading-tight line-clamp-1">{headline}</p>
-                            {rest.length > 0 && (
-                              <p className="text-[12px] text-ink-faint line-clamp-1">{rest.join(' · ')}</p>
-                            )}
-                            <p className={cn('font-display tnum font-bold text-[15px] mt-1', active ? 'text-volt' : 'text-ink')}>
-                              {money(p.amount)}
-                            </p>
-                          </button>
+                          // The info button sits beside the tile, not inside
+                          // it: a button inside a button is not valid.
+                          <div key={p.code} className="relative">
+                            <button
+                              type="button"
+                              onClick={() => setPlan(p)}
+                              className={cn(
+                                'w-full h-full text-left rounded-2xl border p-3 pr-9 min-h-[84px] transition-colors active:scale-[0.98]',
+                                active ? 'bg-volt/10 border-volt' : 'bg-raised border-line',
+                              )}
+                            >
+                              <p className="font-bold text-[14px] leading-tight line-clamp-2">{headline}</p>
+                              {detail && <p className="text-[12px] text-ink-faint line-clamp-2 mt-0.5">{detail}</p>}
+                              <p className={cn('font-display tnum font-bold text-[15px] mt-1', active ? 'text-volt' : 'text-ink')}>
+                                {money(p.amount)}
+                              </p>
+                            </button>
+                            <button
+                              type="button"
+                              aria-label={`Details for ${p.name}`}
+                              onClick={() => setDetails(p)}
+                              className="absolute top-1 right-1 w-8 h-8 grid place-items-center rounded-full text-ink-faint active:bg-line"
+                            >
+                              <Info className="w-4 h-4" strokeWidth={2.4} aria-hidden />
+                            </button>
+                          </div>
                         )
                       })}
                     </div>
+                  )}
+                  {/* The chosen plan in full, so nobody pays for a name
+                      they could only read the start of. */}
+                  {plan && (
+                    <p className="rounded-2xl bg-volt/8 border border-volt/25 px-3.5 py-2.5 text-[13px] text-ink-soft">
+                      <span className="font-bold text-ink">Selected: </span>
+                      {plan.name}
+                    </p>
                   )}
                 </div>
               )}
@@ -541,6 +576,53 @@ export default function BillsScreen() {
         >
           Set PIN and continue
         </Button>
+      </Sheet>
+
+      {/* ── Plan details ─────────────────────────────────────────────── */}
+      <Sheet open={Boolean(details)} onClose={() => setDetails(null)} title="Plan details">
+        {details && (
+          <div className="space-y-4">
+            <div className="rounded-2xl bg-volt/8 border border-volt/25 p-4">
+              <p className="font-display font-bold text-[26px] leading-tight tracking-[-0.02em]">
+                {planLines(details).headline}
+              </p>
+              {/* The provider's own name for the plan, never truncated. */}
+              <p className="text-[14px] text-ink-soft mt-1">{details.name}</p>
+            </div>
+            <div className="space-y-2 text-[14px]">
+              {[
+                ['Network', service?.name ?? ''],
+                ['Data', details.size ?? ''],
+                ['Includes', details.details && details.details !== details.size ? details.details : ''],
+                ['Valid for', details.validity || details.periodLabel || ''],
+                ['Price', money(details.amount)],
+                ['Fee', fee > 0 ? money(fee) : ''],
+              ]
+                .filter(([, value]) => value)
+                .map(([label, value]) => (
+                  <div key={label} className="flex justify-between gap-4">
+                    <span className="text-ink-faint">{label}</span>
+                    <span className="text-right font-bold">{value}</span>
+                  </div>
+                ))}
+              <div className="flex justify-between items-baseline pt-2 border-t border-line-soft">
+                <span className="font-bold">You pay</span>
+                <Money amount={details.amount + fee} size="md" />
+              </div>
+            </div>
+            <Button
+              variant="volt"
+              size="lg"
+              fullWidth
+              onClick={() => {
+                setPlan(details)
+                setDetails(null)
+              }}
+            >
+              {plan?.code === details.code ? 'Selected' : 'Choose this plan'}
+            </Button>
+          </div>
+        )}
       </Sheet>
 
       {/* ── Outcome ─────────────────────────────────────────────────── */}
