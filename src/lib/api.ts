@@ -131,6 +131,12 @@ export interface Offer {
   id: string
   orderId: string
   status: string
+  /**
+   * A campus market run: nobody is behind the counter, so the rider buys the
+   * items with their own cash and gets it back on delivery. Taking one needs
+   * a sourcing limit that covers `payout.cashToPay`.
+   */
+  market?: boolean
   itemCount: number
   itemSummary: string[]
   pickup: { storeName: string; area: string | null; latitude: number | null; longitude: number | null }
@@ -169,6 +175,8 @@ export interface Delivery {
   status: DeliveryStatus
   pickup: {
     storeName: string
+    /** A campus market run — see Offer.market. */
+    isMarket?: boolean
     phone: string | null
     address: string | null
     city: string | null

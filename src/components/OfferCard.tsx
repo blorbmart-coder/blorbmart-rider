@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowRight, Bike, ChefHat, Package, Timer, Zap } from 'lucide-react'
+import { ArrowRight, Bike, Carrot, ChefHat, Package, Timer, Zap } from 'lucide-react'
 import { Button, Card, Chip, Money, cn } from './ui'
 import { countdown, distance, secondsUntil, toDate, travelTime } from '../lib/format'
 import type { Offer, VehicleType } from '../lib/api'
@@ -47,7 +47,11 @@ export default function OfferCard({
   }, [offer.sourcingUnlocksAt, offer.expiresAt])
 
   const eligibility = offer.eligibility
-  const canSourceSoon = !offer.vendorAccepted && eligibility?.blockedReason !== 'limit_too_low'
+  const market = Boolean(offer.market)
+  // A market run cannot be taken without fronting the cash, so a rider whose
+  // limit is too low is told why here rather than refused after tapping.
+  const marketBlocked = market && eligibility?.canDeliver === false
+  const canSourceSoon = !market && !offer.vendorAccepted && eligibility?.blockedReason !== 'limit_too_low'
   const sourcingLive = Boolean(eligibility?.canSource)
   const km = distance(offer.distanceKm)
   const eta = travelTime(offer.distanceKm, vehicle)
@@ -96,7 +100,12 @@ export default function OfferCard({
             left where the eye lands first, where it goes on the right. */}
         <div className="flex gap-4 p-4 pb-3.5">
           <div className="shrink-0">
-            <Money amount={offer.payout.deliveryEarning} size="xl" tone="volt" className="aura-volt" />
+            <Money
+              amount={market ? offer.payout.maxEarnings : offer.payout.deliveryEarning}
+              size="xl"
+              tone="volt"
+              className="aura-volt"
+            />
             <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink-faint mt-1.5">You earn</p>
           </div>
 
@@ -125,6 +134,11 @@ export default function OfferCard({
           <Chip icon={Package} tone="outline">
             {offer.itemCount} item{offer.itemCount === 1 ? '' : 's'}
           </Chip>
+          {market && (
+            <Chip tone="ember" icon={Carrot}>
+              Market run
+            </Chip>
+          )}
           {offer.vendorAccepted && (
             <Chip tone="volt" icon={ChefHat}>
               Cooking
@@ -181,11 +195,47 @@ export default function OfferCard({
           </div>
         )}
 
+        {/* ── The market run ───────────────────────────────────────────
+            The cash is the job, not an upgrade, so it is stated as the
+            deal: what to spend, and that it all comes back. */}
+        {market && (
+          <div className="mx-3 mb-3 rounded-2xl bg-ember/10 border border-ember/20 px-3.5 py-3">
+            <div className="flex items-start gap-2.5">
+              <Carrot className="w-4 h-4 text-ember shrink-0 mt-0.5" strokeWidth={2.5} aria-hidden />
+              <p className="text-[12px] text-ink-soft leading-snug">
+                {marketBlocked ? (
+                  <>
+                    You buy the items for this one (
+                    <Money amount={offer.payout.cashToPay} size="xs" tone="ink" className="!text-[12px]" />
+                    ). Complete more deliveries to raise your limit.
+                  </>
+                ) : (
+                  <>
+                    <span className="font-bold text-ember-light">Buy the items at the market.</span> Spend{' '}
+                    <Money amount={offer.payout.cashToPay} size="xs" tone="ink" className="!text-[12px]" /> and get it
+                    all back on delivery, with a{' '}
+                    <Money amount={offer.payout.potentialSourcingBonus} size="xs" tone="ink" className="!text-[12px]" />{' '}
+                    bonus already in the figure above.
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center gap-2 px-3 pb-3">
           <Button variant="ghost" size="md" onClick={onSkip} className="px-5">
             Skip
           </Button>
-          <Button variant="volt" size="md" fullWidth loading={accepting} iconRight={ArrowRight} onClick={onAccept}>
+          <Button
+            variant="volt"
+            size="md"
+            fullWidth
+            loading={accepting}
+            disabled={marketBlocked}
+            iconRight={ArrowRight}
+            onClick={onAccept}
+          >
             Take it
           </Button>
         </div>

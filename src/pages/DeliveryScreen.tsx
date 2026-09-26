@@ -284,6 +284,7 @@ export default function DeliveryScreen() {
   }
 
   const sourcing = delivery.mode === 'sourcing'
+  const market = Boolean(delivery.pickup.isMarket)
   const paid = Number(delivery.cashPaidAmount || 0) > 0
   const progress = progressFor(delivery)
   const storeDirections = directionsUrl(delivery.pickup.latitude, delivery.pickup.longitude, delivery.pickup.storeName)
@@ -311,7 +312,7 @@ export default function DeliveryScreen() {
     switch (delivery.status) {
       case 'assigned':
         return {
-          label: "I'm at the restaurant",
+          label: market ? "I'm at the market" : "I'm at the restaurant",
           icon: Store,
           variant: 'iris' as const,
           run: () => run('arrived', () => riderApi.arrived(id)),
@@ -319,6 +320,9 @@ export default function DeliveryScreen() {
         }
       case 'at_store':
       case 'paid_vendor':
+        // At a market the pay card is the step: the server will not let the
+        // bag be collected before the cash is recorded.
+        if (market && !paid) return null
         return {
           label: 'I have the order',
           icon: CheckCircle2,
@@ -437,13 +441,30 @@ export default function DeliveryScreen() {
         {sourcing && !paid && !progress.failed && (
           <Card variant="solid" glow="ember" className="p-5">
             <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink-faint mb-2">
-              Pay this at the counter
+              {market ? 'Spend this at the market' : 'Pay this at the counter'}
             </p>
             <Money amount={delivery.cashToPay} size="hero" tone="ember" />
-            <p className="text-[13px] text-ink-soft leading-relaxed mt-4">
-              Show the restaurant order <span className="font-bold text-ink selectable">{delivery.orderId}</span>.
-              This is exactly what Blorbmart would have paid them, so it is the amount they expect.
-            </p>
+            {market ? (
+              <>
+                <p className="text-[13px] text-ink-soft leading-relaxed mt-4">
+                  Buy everything on this list. This is what the customer paid for the items, and it is exactly
+                  what comes back to you.
+                </p>
+                <ul className="mt-3 space-y-1.5">
+                  {delivery.items.map((item, i) => (
+                    <li key={i} className="flex gap-2 text-[14px] font-semibold">
+                      <span className="text-ember-light tnum shrink-0">{item.quantity}×</span>
+                      <span className="min-w-0">{item.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <p className="text-[13px] text-ink-soft leading-relaxed mt-4">
+                Show the restaurant order <span className="font-bold text-ink selectable">{delivery.orderId}</span>.
+                This is exactly what Blorbmart would have paid them, so it is the amount they expect.
+              </p>
+            )}
             <div className="mt-4 rounded-2xl bg-volt/8 border border-volt/20 p-3.5 flex gap-2.5">
               <ShieldCheck className="w-[18px] h-[18px] text-volt shrink-0 mt-0.5" strokeWidth={2.4} aria-hidden />
               <p className="text-[13px] text-ink-soft leading-snug">
