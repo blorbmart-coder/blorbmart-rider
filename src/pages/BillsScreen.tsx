@@ -141,6 +141,8 @@ export default function BillsScreen() {
   const [pin, setPin] = useState('')
   const [idempotencyKey, setIdempotencyKey] = useState(newKey)
   const [result, setResult] = useState<BillPayment | null>(null)
+  // An exam purchase delivers a PIN (and serial), not a meter token.
+  const tokenNoun = result?.category === 'education' ? 'PIN' : 'Token'
   const [pinSetupOpen, setPinSetupOpen] = useState(false)
   /** The plan whose full details are open. */
   const [details, setDetails] = useState<BillPlan | null>(null)
@@ -642,7 +644,7 @@ export default function BillsScreen() {
 
             {result.token && (
               <div className="rounded-2xl bg-volt/8 border border-volt/25 p-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-volt mb-1">Token</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-volt mb-1">{tokenNoun}</p>
                 <p className="font-display tnum font-bold text-[20px] tracking-[0.04em] break-all">{result.token}</p>
                 {result.units && <p className="text-[13px] text-ink-soft mt-1">{result.units}</p>}
                 <Button
@@ -651,12 +653,12 @@ export default function BillsScreen() {
                   className="mt-3"
                   onClick={() => {
                     void navigator.clipboard?.writeText(result.token).then(
-                      () => toast.success('Token copied'),
+                      () => toast.success(`${tokenNoun} copied`),
                       () => toast.error('Copy it by hand — the clipboard is blocked.'),
                     )
                   }}
                 >
-                  Copy token
+                  Copy {tokenNoun === 'PIN' ? 'PIN' : 'token'}
                 </Button>
               </div>
             )}
