@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowRight, Bike, Carrot, ChefHat, Package, Timer, Zap } from 'lucide-react'
+import { ArrowRight, Bike, Carrot, ChefHat, Package, Timer, X, Zap } from 'lucide-react'
 import { Button, Card, Chip, Money, cn } from './ui'
 import { countdown, distance, secondsUntil, toDate, travelTime } from '../lib/format'
 import type { Offer, VehicleType } from '../lib/api'
@@ -22,13 +22,13 @@ export default function OfferCard({
   offer,
   vehicle,
   onAccept,
-  onSkip,
+  onDecline,
   accepting,
 }: {
   offer: Offer
   vehicle: VehicleType | null | undefined
   onAccept: () => void
-  onSkip: () => void
+  onDecline: () => void
   accepting: boolean
 }) {
   const [unlockIn, setUnlockIn] = useState(() => secondsUntil(offer.sourcingUnlocksAt))
@@ -224,8 +224,10 @@ export default function OfferCard({
         )}
 
         <div className="flex items-center gap-2 px-3 pb-3">
-          <Button variant="ghost" size="md" onClick={onSkip} className="px-5">
-            Skip
+          {/* Declining is as plain as accepting: a labelled button, not a
+              quiet "Skip" that looked like it did nothing. */}
+          <Button variant="danger" size="md" icon={X} onClick={onDecline} disabled={accepting} className="px-4">
+            Decline
           </Button>
           <Button
             variant="volt"
@@ -236,7 +238,7 @@ export default function OfferCard({
             iconRight={ArrowRight}
             onClick={onAccept}
           >
-            Take it
+            Accept job
           </Button>
         </div>
       </Card>

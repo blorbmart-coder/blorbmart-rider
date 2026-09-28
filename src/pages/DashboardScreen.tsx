@@ -61,15 +61,22 @@ export default function DashboardScreen() {
   const { rider, setRider } = useRider()
   const [toggling, setToggling] = useState(false)
   const [acceptingId, setAcceptingId] = useState<string | null>(null)
+  /**
+   * Jobs this rider has declined, hidden at once. The server drops them from
+   * the board too, but only on the next refresh — until then the card sat
+   * there and "Skip" looked as if it had done nothing.
+   */
+  const [declined, setDeclined] = useState<ReadonlySet<string>>(() => new Set())
 
   const online = Boolean(rider?.isAvailable)
   const { coords, locationDenied } = usePresence({ online })
   const {
-    offers,
+    offers: liveOffers,
     loading: offersLoading,
     error: offersError,
     refresh: refreshOffers,
   } = useLiveOffers({ enabled: online })
+  const offers = liveOffers.filter((offer) => !declined.has(offer.id))
 
   const {
     data: earnings,
@@ -132,13 +139,16 @@ export default function DashboardScreen() {
     }
   }
 
-  const skip = async (offer: Offer) => {
+  const decline = async (offer: Offer) => {
+    setDeclined((current) => new Set(current).add(offer.id))
+    toast('Job declined. It goes to another rider.', { icon: '👋' })
     try {
       await riderApi.declineOffer(offer.id)
     } catch {
-      /* Skipping is a preference, not a transaction. A failure costs nothing. */
+      /* Declining is a preference, not a transaction. A failure costs nothing. */
     }
   }
+
 
   const sourcing = rider?.sourcing
 
@@ -405,7 +415,7 @@ export default function DashboardScreen() {
                     vehicle={rider?.vehicleType}
                     accepting={acceptingId === offer.id}
                     onAccept={() => accept(offer)}
-                    onSkip={() => skip(offer)}
+                    onDecline={() => void decline(offer)}
                   />
                 ))}
               </AnimatePresence>

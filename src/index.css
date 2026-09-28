@@ -370,6 +370,15 @@
     display: none;
   }
 
+  /* Except a loading spinner. It is the one animation that carries
+     information, and frozen it says nothing is happening — battery saver
+     turns this setting on for most Android phones. It turns slower here,
+     without travelling anywhere. Outranks the rule above by specificity. */
+  .animate-spin {
+    animation-duration: 1.4s !important;
+    animation-iteration-count: infinite !important;
+  }
+
   /* The shortened duration alone would still hold the mark invisible for
      its delay, then snap it in. */
   .mark-draw,
