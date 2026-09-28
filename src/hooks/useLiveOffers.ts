@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { firestore } from '../lib/firestore'
 import { errorMessage, riderApi, type Offer } from '../lib/api'
+import { playAlert, primeAlertSound, stopAlert } from '../lib/alertSound'
 
 /**
  * The live job board.
@@ -29,10 +30,27 @@ export function useLiveOffers({ enabled }: { enabled: boolean }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const enrichTimer = useRef<number | null>(null)
+  /**
+   * Offer ids already on the board. The first list after going online is the
+   * board as it stands and does not ring; a job that appears after that
+   * rings the loud Blorbmart alert until the rider taps the screen.
+   */
+  const known = useRef<Set<string> | null>(null)
+
+  useEffect(() => {
+    primeAlertSound()
+  }, [])
+
+  const ringForNew = useCallback((next: Offer[]) => {
+    const seen = known.current
+    known.current = new Set(next.map((offer) => offer.id))
+    if (seen && next.some((offer) => !seen.has(offer.id))) playAlert({ repeatFor: 30_000 })
+  }, [])
 
   const refresh = useCallback(async () => {
     try {
       const result = await riderApi.offers()
+      ringForNew(result.offers)
       setOffers(result.offers)
       setError(null)
       return result
@@ -40,18 +58,20 @@ export function useLiveOffers({ enabled }: { enabled: boolean }) {
       setError(errorMessage(err, 'Could not load jobs.'))
       throw err
     }
-  }, [])
+  }, [ringForNew])
 
   useEffect(() => {
     if (!enabled) return
 
     let cancelled = false
+    known.current = null
     let unsubscribe: (() => void) | null = null
 
     const enrich = async () => {
       try {
         const result = await riderApi.offers()
         if (!cancelled) {
+          ringForNew(result.offers)
           setOffers(result.offers)
           setError(null)
         }
@@ -108,8 +128,9 @@ export function useLiveOffers({ enabled }: { enabled: boolean }) {
       window.clearInterval(poll)
       if (enrichTimer.current) window.clearTimeout(enrichTimer.current)
       unsubscribe?.()
+      stopAlert()
     }
-  }, [enabled])
+  }, [enabled, ringForNew])
 
   // Offline is a derived state, not a stored one. Clearing the list from an
   // effect would render one frame of stale jobs to a rider who has just gone
