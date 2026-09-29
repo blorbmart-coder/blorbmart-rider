@@ -25,6 +25,10 @@ import { riderApi, errorMessage, type Delivery } from '../lib/api'
 import { usePresence, TRIP_HEARTBEAT_MS } from '../hooks/usePresence'
 import { Button, Card, Chip, IconBadge, Money, Sheet, Skeleton, cn, tap } from '../components/ui'
 import { BurstScene, GlowField } from '../components/art'
+import { SosButton } from '../components/Safety'
+
+/** A job still on the road. SOS is offered only while one is. */
+const ACTIVE_STATUSES = ['assigned', 'at_store', 'paid_vendor', 'picked_up', 'on_the_way']
 import { countdown, directionsUrl, secondsUntil, telUrl } from '../lib/format'
 
 /**
@@ -370,11 +374,16 @@ export default function DeliveryScreen() {
             >
               <ArrowLeft className="w-5 h-5" strokeWidth={2.4} aria-hidden />
             </button>
-            {sourcing && (
-              <Chip tone="ember" icon={HandCoins}>
-                You&rsquo;re covering this
-              </Chip>
-            )}
+            <div className="flex items-center gap-2">
+              {sourcing && (
+                <Chip tone="ember" icon={HandCoins}>
+                  You&rsquo;re covering this
+                </Chip>
+              )}
+              {/* Only while the job is live: that is when the rider is out at
+                  night at a stranger's door. */}
+              {ACTIVE_STATUSES.includes(delivery.status) && <SosButton coords={coords} />}
+            </div>
           </div>
 
           <div className="mt-4">

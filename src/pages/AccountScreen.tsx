@@ -1,22 +1,27 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
   BadgeCheck,
   Bike,
+  Camera,
   Download,
   GraduationCap,
   HandCoins,
+  Hourglass,
   LifeBuoy,
   LogOut,
+  ShieldAlert,
   Star,
   Wallet,
 } from 'lucide-react'
-import { riderApi } from '../lib/api'
+import { riderApi, type Rider } from '../lib/api'
 import { useRider } from '../contexts/RiderContext'
 import { useInstalled } from '../hooks/usePresence'
 import { Button, Card, Chip, IconBadge, Money, ProgressBar, Row } from '../components/ui'
 import { BrandMark, GlowField } from '../components/art'
 import { initials, money } from '../lib/format'
+import { EmergencyContactSheet, VerificationSheet } from '../components/Safety'
 
 const VEHICLE_LABEL: Record<string, string> = {
   foot: 'On foot',
@@ -29,6 +34,8 @@ export default function AccountScreen() {
   const navigate = useNavigate()
   const { rider, logout } = useRider()
   const installed = useInstalled()
+  const [verifyOpen, setVerifyOpen] = useState(false)
+  const [contactOpen, setContactOpen] = useState(false)
 
   const { data: earnings } = useQuery({ queryKey: ['earnings'], queryFn: riderApi.earnings })
   const sourcing = rider?.sourcing
@@ -41,8 +48,12 @@ export default function AccountScreen() {
 
         <div className="relative flex items-center gap-4">
           <div className="relative shrink-0">
-            <div className="w-[68px] h-[68px] rounded-[22px] bg-raised border border-line flex items-center justify-center font-display text-[22px] font-bold">
-              {initials(rider?.displayName)}
+            <div className="w-[68px] h-[68px] overflow-hidden rounded-[22px] bg-raised border border-line flex items-center justify-center font-display text-[22px] font-bold">
+              {rider?.photoUrl ? (
+                <img src={rider.photoUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                initials(rider?.displayName)
+              )}
             </div>
             {rider?.status === 'active' && (
               <span className="absolute -bottom-1 -right-1 w-7 h-7 rounded-xl bg-surface flex items-center justify-center border-[3px] border-void">
@@ -59,11 +70,17 @@ export default function AccountScreen() {
                 <Star className="w-3.5 h-3.5 fill-gold text-gold" aria-hidden />
                 {(rider?.rating ?? 5).toFixed(1)}
               </span>
-              {rider?.status === 'active' && (
+              {/* "Verified" means campus ops matched the face to an ID — not
+                  merely that signup finished. */}
+              {rider?.verified ? (
                 <Chip tone="volt" icon={BadgeCheck}>
                   Verified
                 </Chip>
-              )}
+              ) : rider?.verificationStatus === 'pending' ? (
+                <Chip tone="gold" icon={Hourglass}>
+                  Being checked
+                </Chip>
+              ) : null}
             </div>
           </div>
         </div>
@@ -134,6 +151,8 @@ export default function AccountScreen() {
           </Card>
         )}
 
+        {rider && !rider.verified && <VerifyCard rider={rider} onOpen={() => setVerifyOpen(true)} />}
+
         <Card variant="solid" className="py-1.5 overflow-hidden">
           <Row icon={Wallet} label="Wallet and cashouts" tone="volt" onClick={() => navigate('/earnings')} />
           <div className="h-px bg-line-soft mx-4" />
@@ -162,6 +181,8 @@ export default function AccountScreen() {
         )}
 
         <Card variant="solid" className="py-1.5 overflow-hidden">
+          <Row icon={ShieldAlert} label="Emergency contact" danger onClick={() => setContactOpen(true)} />
+          <div className="h-px bg-line-soft mx-4" />
           <Row
             icon={LifeBuoy}
             label="Get help"
@@ -190,6 +211,50 @@ export default function AccountScreen() {
           <p className="text-[12px] font-semibold">Blorbmart · Powering students</p>
         </div>
       </main>
+
+      {rider && <VerificationSheet open={verifyOpen} onClose={() => setVerifyOpen(false)} rider={rider} />}
+      <EmergencyContactSheet open={contactOpen} onClose={() => setContactOpen(false)} />
     </div>
+  )
+}
+
+/** The photo check, until it is done: what state it is in and what to do. */
+function VerifyCard({ rider, onOpen }: { rider: Rider; onOpen: () => void }) {
+  const status = rider.verificationStatus ?? 'unverified'
+  const copy =
+    status === 'pending'
+      ? {
+          title: 'Your photos are being checked',
+          body: 'Campus ops is matching your selfie to your ID. You will get a notification when it is done.',
+          tone: 'gold' as const,
+        }
+      : status === 'rejected'
+        ? {
+            title: 'Your photos need another look',
+            body: rider.verification?.reason ?? 'Campus ops could not verify them. Send a clearer selfie and ID photo.',
+            tone: 'ember' as const,
+          }
+        : {
+            title: 'Get verified',
+            body: rider.verificationRequired
+              ? 'You need a verified photo to take jobs. Send a selfie and a photo of your ID.'
+              : 'Customers see your photo and a verified mark when you are on the way. Send a selfie and a photo of your ID.',
+            tone: 'iris' as const,
+          }
+  return (
+    <Card variant="solid" className="p-4">
+      <div className="flex items-center gap-2.5">
+        <IconBadge icon={BadgeCheck} tone={copy.tone} size="sm" />
+        <p className="font-display text-[16px] font-bold tracking-[-0.02em]">{copy.title}</p>
+      </div>
+      <p className="mt-2.5 text-[13px] leading-relaxed text-ink-soft">{copy.body}</p>
+      {status !== 'pending' && (
+        <div className="mt-4">
+          <Button variant="volt" fullWidth icon={Camera} onClick={onOpen}>
+            {status === 'rejected' ? 'Send new photos' : 'Get verified'}
+          </Button>
+        </div>
+      )}
+    </Card>
   )
 }

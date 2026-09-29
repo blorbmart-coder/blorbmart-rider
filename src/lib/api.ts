@@ -109,15 +109,43 @@ export interface Rider {
   } | null
   vehicleType?: VehicleType | null
   plateNumber?: string | null
-  documents?: { idType: string; idNumber: string } | null
+  documents?: { idType: string; idNumber: string; selfieUrl?: string | null; idImageUrl?: string | null } | null
   onboardingStep: OnboardingStep
   onboardingComplete: boolean
   status: RiderStatus
+  statusReason?: string | null
   isAvailable: boolean
   online: boolean
   rating: number
   deliveriesCompleted: number
   sourcing: SourcingProgress
+  /** The verified selfie customers see. Only changes by sending new photos. */
+  photoUrl?: string | null
+  verificationStatus?: VerificationStatus
+  verified?: boolean
+  verification?: { status: VerificationStatus; reason?: string | null } | null
+  /** When true the backend refuses jobs until campus ops verifies the rider. */
+  verificationRequired?: boolean
+}
+
+export type VerificationStatus = 'unverified' | 'pending' | 'verified' | 'rejected'
+
+/* ── Safety ─────────────────────────────────────────────────────────────── */
+
+export interface SosState {
+  alertId: string
+  status: 'open' | 'acknowledged' | 'resolved'
+  call: {
+    /** The national emergency number — 112 in Nigeria. */
+    emergency: string
+    hotline: string | null
+    campusOps: { name: string; phone: string } | null
+  }
+}
+
+export interface EmergencyContact {
+  name: string | null
+  phone: string
 }
 
 export interface OfferPayout {
@@ -313,6 +341,10 @@ export const riderApi = {
   saveStep: (step: OnboardingStep, payload: Record<string, unknown>) =>
     unwrap<Rider>(api.post(`/api/rider/onboarding/${step}`, payload)),
 
+  /** Sends a selfie and ID photo (already uploaded) for campus ops to check. */
+  submitVerification: (body: { selfieUrl: string; idImageUrl: string; idType?: string; idNumber?: string }) =>
+    unwrap<Rider>(api.post('/api/rider/verification', body)),
+
   setAvailability: (isAvailable: boolean, location?: GeolocationCoordinates | null) =>
     unwrap<Rider>(
       api.post('/api/rider/availability', {
@@ -435,6 +467,28 @@ export interface BillPayment {
   units: string
   failureReason: string
   createdAt: string | null
+}
+
+/**
+ * SOS and the emergency contact — the same /api/safety the customer app uses,
+ * with `as: 'rider'`. The server finds the delivery and the customer itself.
+ */
+export const safetyApi = {
+  raise: (location: { latitude: number; longitude: number; accuracy?: number } | null, note?: string) =>
+    unwrap<SosState & { repeated: boolean }>(
+      api.post('/api/safety/sos', { as: 'rider', location, note: note || undefined }, { timeout: 20000 }),
+    ),
+
+  /** The rider's open alert, or null. */
+  mine: () => unwrap<SosState | null>(api.get('/api/safety/sos/mine')),
+
+  markSafe: (alertId: string) => api.post(`/api/safety/sos/${encodeURIComponent(alertId)}/safe`),
+
+  emergencyContact: () => unwrap<EmergencyContact | null>(api.get('/api/safety/emergency-contact')),
+
+  /** An empty phone clears it. */
+  saveEmergencyContact: (name: string, phone: string) =>
+    unwrap<EmergencyContact | null>(api.post('/api/safety/emergency-contact', { name, phone })),
 }
 
 export const billsApi = {

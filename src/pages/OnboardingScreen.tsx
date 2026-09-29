@@ -16,6 +16,7 @@ import { riderApi, errorMessage, type OnboardingStep, type University, type Vehi
 import { useRider } from '../contexts/RiderContext'
 import { Button, Field, IconBadge, SelectField, cn } from '../components/ui'
 import { BurstScene, GlowField } from '../components/art'
+import { PhotoPair } from '../components/Safety'
 
 /**
  * Onboarding.
@@ -74,6 +75,8 @@ export default function OnboardingScreen() {
 
   const [idType, setIdType] = useState(ID_TYPES[0])
   const [idNumber, setIdNumber] = useState('')
+  const [selfieUrl, setSelfieUrl] = useState<string | null>(null)
+  const [idImageUrl, setIdImageUrl] = useState<string | null>(null)
 
   const [fieldError, setFieldError] = useState<string | null>(null)
 
@@ -370,7 +373,7 @@ export default function OnboardingScreen() {
             >
               <IconBadge icon={IdCard} tone="iris" size="lg" className="mt-4" />
               <h1 className="font-display text-[32px] leading-[1.05] font-bold tracking-[-0.04em] mt-5">
-                One ID and you&rsquo;re done.
+                Show us it&rsquo;s you.
               </h1>
               <p className="mt-3 text-ink-soft leading-relaxed">
                 Customers are handing you their food and sometimes their money. This is how we know who is on the
@@ -393,6 +396,23 @@ export default function OnboardingScreen() {
                 />
               </div>
 
+              {/* Checked by campus ops, not by a machine: the selfie becomes
+                  the photo customers see when this rider is on the way. */}
+              <div className="mt-6">
+                <p className="text-[14px] font-bold">Add a selfie and a photo of that ID</p>
+                <p className="mt-1 mb-3 text-[13px] leading-relaxed text-ink-faint">
+                  Customers see your selfie and a verified mark once campus ops checks it against your ID.
+                </p>
+                <PhotoPair
+                  selfieUrl={selfieUrl}
+                  idUrl={idImageUrl}
+                  onChange={(selfie, id) => {
+                    setSelfieUrl(selfie)
+                    setIdImageUrl(id)
+                  }}
+                />
+              </div>
+
               <div className="mt-8">
                 <Button
                   variant="volt"
@@ -400,8 +420,8 @@ export default function OnboardingScreen() {
                   fullWidth
                   loading={busy}
                   iconRight={ArrowRight}
-                  disabled={!idNumber.trim()}
-                  onClick={() => save('identity', { idType, idNumber })}
+                  disabled={!idNumber.trim() || !selfieUrl || !idImageUrl}
+                  onClick={() => save('identity', { idType, idNumber, selfieUrl, idImageUrl })}
                 >
                   Continue
                 </Button>
