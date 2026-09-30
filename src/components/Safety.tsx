@@ -228,7 +228,7 @@ export function SosButton({ coords }: { coords: GeolocationCoordinates | null })
   )
 }
 
-function SosSheet({ open, onClose, coords }: { open: boolean; onClose: () => void; coords: GeolocationCoordinates | null }) {
+export function SosSheet({ open, onClose, coords }: { open: boolean; onClose: () => void; coords: GeolocationCoordinates | null }) {
   const [state, setState] = useState<SosState | null>(null)
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
@@ -308,7 +308,7 @@ function SosSheet({ open, onClose, coords }: { open: boolean; onClose: () => voi
               <p className="pb-3 text-[15px] leading-relaxed text-ink-soft">
                 {state.status === 'acknowledged'
                   ? 'Campus ops has your alert and is on it. Get somewhere public and keep your phone on.'
-                  : 'Campus ops and the Blorbmart team have your location, this order and the customer’s details. Get somewhere public and keep your phone on.'}
+                  : 'Campus ops and the Blorbmart team have your location — and the order and customer’s details if you are on a job. Get somewhere public and keep your phone on.'}
               </p>
               {state.call.campusOps && (
                 <Button variant="iris" size="lg" fullWidth icon={Phone} onClick={() => call(state.call.campusOps!.phone)}>
@@ -335,8 +335,9 @@ function SosSheet({ open, onClose, coords }: { open: boolean; onClose: () => voi
           ) : (
             <>
               <p className="pb-3 text-[15px] leading-relaxed text-ink-soft">
-                This alerts campus ops and the Blorbmart team right away with where you are, this order and the
-                customer’s details. If you are in immediate danger, call {emergency} first.
+                This alerts campus ops, the Blorbmart team and your emergency contact right away with where you are —
+                and the order and customer’s details if you are on a job. If you are in immediate danger, call{' '}
+                {emergency} first.
               </p>
               <Button variant="danger" size="lg" fullWidth icon={ShieldAlert} loading={sending} onClick={() => void send()}>
                 Send SOS

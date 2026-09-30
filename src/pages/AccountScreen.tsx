@@ -12,6 +12,7 @@ import {
   LifeBuoy,
   LogOut,
   ShieldAlert,
+  Siren,
   Star,
   Wallet,
 } from 'lucide-react'
@@ -21,7 +22,7 @@ import { useInstalled } from '../hooks/usePresence'
 import { Button, Card, Chip, IconBadge, Money, ProgressBar, Row } from '../components/ui'
 import { BrandMark, GlowField } from '../components/art'
 import { initials, money } from '../lib/format'
-import { EmergencyContactSheet, VerificationSheet } from '../components/Safety'
+import { EmergencyContactSheet, SosSheet, VerificationSheet } from '../components/Safety'
 
 const VEHICLE_LABEL: Record<string, string> = {
   foot: 'On foot',
@@ -36,6 +37,7 @@ export default function AccountScreen() {
   const installed = useInstalled()
   const [verifyOpen, setVerifyOpen] = useState(false)
   const [contactOpen, setContactOpen] = useState(false)
+  const [sosOpen, setSosOpen] = useState(false)
 
   const { data: earnings } = useQuery({ queryKey: ['earnings'], queryFn: riderApi.earnings })
   const sourcing = rider?.sourcing
@@ -181,6 +183,8 @@ export default function AccountScreen() {
         )}
 
         <Card variant="solid" className="py-1.5 overflow-hidden">
+          <Row icon={Siren} label="SOS — get help now" danger onClick={() => setSosOpen(true)} />
+          <div className="h-px bg-line-soft mx-4" />
           <Row icon={ShieldAlert} label="Emergency contact" danger onClick={() => setContactOpen(true)} />
           <div className="h-px bg-line-soft mx-4" />
           <Row
@@ -214,6 +218,7 @@ export default function AccountScreen() {
 
       {rider && <VerificationSheet open={verifyOpen} onClose={() => setVerifyOpen(false)} rider={rider} />}
       <EmergencyContactSheet open={contactOpen} onClose={() => setContactOpen(false)} />
+      <SosSheet open={sosOpen} onClose={() => setSosOpen(false)} coords={null} />
     </div>
   )
 }

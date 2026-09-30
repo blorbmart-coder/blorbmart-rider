@@ -20,6 +20,7 @@ import { useRider } from '../contexts/RiderContext'
 import { useLiveOffers } from '../hooks/useLiveOffers'
 import { usePresence } from '../hooks/usePresence'
 import { canOfferPush, enablePush } from '../lib/push'
+import { SosButton } from '../components/Safety'
 import { Button, Card, Chip, EmptyState, IconBadge, Money, ProgressBar, SectionTitle, Skeleton, cn, tap } from '../components/ui'
 import { GlowField, NightScene, RadarScene } from '../components/art'
 import OfferCard from '../components/OfferCard'
@@ -177,11 +178,16 @@ export default function DashboardScreen() {
               </div>
             </div>
 
-            {(earnings?.streakDays ?? 0) > 1 && (
-              <Chip tone="gold" icon={Flame}>
-                {earnings?.streakDays} day streak
-              </Chip>
-            )}
+            <div className="flex items-center gap-2">
+              {(earnings?.streakDays ?? 0) > 1 && (
+                <Chip tone="gold" icon={Flame}>
+                  {earnings?.streakDays} day streak
+                </Chip>
+              )}
+              {/* Personal safety between jobs; a live delivery is attached by
+                  the server if there is one. */}
+              <SosButton coords={null} />
+            </div>
           </div>
 
           {/*
