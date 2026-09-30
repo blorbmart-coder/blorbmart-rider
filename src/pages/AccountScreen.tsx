@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -6,14 +6,18 @@ import {
   Bike,
   Camera,
   Download,
+  FileText,
   GraduationCap,
   HandCoins,
   Hourglass,
   LifeBuoy,
+  Lock,
   LogOut,
+  MessageCircle,
   ShieldAlert,
   Siren,
   Star,
+  UserX,
   Wallet,
 } from 'lucide-react'
 import { riderApi, type Rider } from '../lib/api'
@@ -23,6 +27,7 @@ import { Button, Card, Chip, IconBadge, Money, ProgressBar, Row } from '../compo
 import { BrandMark, GlowField } from '../components/art'
 import { initials, money } from '../lib/format'
 import { EmergencyContactSheet, SosSheet, VerificationSheet } from '../components/Safety'
+import { LegalViewer, supportEmailUrl, supportWhatsAppUrl, type LegalDoc } from '../components/LegalViewer'
 
 const VEHICLE_LABEL: Record<string, string> = {
   foot: 'On foot',
@@ -38,6 +43,8 @@ export default function AccountScreen() {
   const [verifyOpen, setVerifyOpen] = useState(false)
   const [contactOpen, setContactOpen] = useState(false)
   const [sosOpen, setSosOpen] = useState(false)
+  const [legal, setLegal] = useState<LegalDoc | null>(null)
+  const closeLegal = useCallback(() => setLegal(null), [])
 
   const { data: earnings } = useQuery({ queryKey: ['earnings'], queryFn: riderApi.earnings })
   const sourcing = rider?.sourcing
@@ -188,13 +195,30 @@ export default function AccountScreen() {
           <Row icon={ShieldAlert} label="Emergency contact" danger onClick={() => setContactOpen(true)} />
           <div className="h-px bg-line-soft mx-4" />
           <Row
+            icon={MessageCircle}
+            label="Chat with support"
+            value="WhatsApp"
+            tone="neutral"
+            onClick={() => window.open(supportWhatsAppUrl('Hello Blorbmart, I am a rider and I need help'), '_blank', 'noopener,noreferrer')}
+          />
+          <div className="h-px bg-line-soft mx-4" />
+          <Row
             icon={LifeBuoy}
-            label="Get help"
+            label="Email us"
             tone="neutral"
             onClick={() => {
-              window.location.href = 'mailto:blorbmarthelpdesk@gmail.com?subject=Rider%20support'
+              window.location.href = supportEmailUrl('Rider support')
             }}
           />
+        </Card>
+
+        {/* Terms, privacy and deletion, read inside the app. */}
+        <Card variant="solid" className="py-1.5 overflow-hidden">
+          <Row icon={FileText} label="Terms and conditions" tone="neutral" onClick={() => setLegal('terms')} />
+          <div className="h-px bg-line-soft mx-4" />
+          <Row icon={Lock} label="Privacy policy" tone="neutral" onClick={() => setLegal('privacy')} />
+          <div className="h-px bg-line-soft mx-4" />
+          <Row icon={UserX} label="Delete my account" tone="neutral" onClick={() => setLegal('delete-account')} />
         </Card>
 
         <Button
@@ -219,6 +243,7 @@ export default function AccountScreen() {
       {rider && <VerificationSheet open={verifyOpen} onClose={() => setVerifyOpen(false)} rider={rider} />}
       <EmergencyContactSheet open={contactOpen} onClose={() => setContactOpen(false)} />
       <SosSheet open={sosOpen} onClose={() => setSosOpen(false)} coords={null} />
+      <LegalViewer doc={legal} onClose={closeLegal} />
     </div>
   )
 }
