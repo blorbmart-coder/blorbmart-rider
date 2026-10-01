@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowRight, Bike, Carrot, ChefHat, Package, Timer, X, Zap } from 'lucide-react'
+import { ArrowRight, Bike, CalendarClock, Carrot, ChefHat, Package, Timer, X, Zap } from 'lucide-react'
 import { Button, Card, Chip, Money, cn } from './ui'
 import { countdown, distance, secondsUntil, toDate, travelTime } from '../lib/format'
 import type { Offer, VehicleType } from '../lib/api'
@@ -134,6 +134,11 @@ export default function OfferCard({
           <Chip icon={Package} tone="outline">
             {offer.itemCount} item{offer.itemCount === 1 ? '' : 's'}
           </Chip>
+          {offer.deliverByLabel && (
+            <Chip icon={CalendarClock} tone="outline">
+              Deliver by {offer.deliverByLabel}
+            </Chip>
+          )}
           {market && (
             <Chip tone="ember" icon={Carrot}>
               Market run

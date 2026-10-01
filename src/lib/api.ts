@@ -170,6 +170,8 @@ export interface Offer {
   pickup: { storeName: string; area: string | null; latitude: number | null; longitude: number | null }
   dropoff: { area: string; latitude: number | null; longitude: number | null }
   distanceKm: number | null
+  /** On a scheduled order: when the customer wants it, e.g. "Thu 2 Oct, 12:45 pm". */
+  deliverByLabel?: string | null
   payout: OfferPayout
   subtotal: number
   deliveryFee: number
@@ -232,6 +234,8 @@ export interface Delivery {
   }
   cashToPay: number
   cashPaidAmount: number
+  /** On a scheduled order: when the customer wants it. Aim for this, not ASAP. */
+  deliverByLabel?: string | null
   /**
    * Whether the restaurant has taken this order on, read live from the order
    * rather than from a flag written when the job was broadcast. The cash offer

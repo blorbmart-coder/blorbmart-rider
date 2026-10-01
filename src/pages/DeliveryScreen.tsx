@@ -555,6 +555,11 @@ export default function DeliveryScreen() {
                   {delivery.dropoff.addressLine1}
                   {delivery.dropoff.landmark ? ` · ${delivery.dropoff.landmark}` : ''}
                 </p>
+                {delivery.deliverByLabel && (
+                  <p className="text-[13px] text-volt font-bold mt-1.5 leading-snug">
+                    Customer wants it by {delivery.deliverByLabel}
+                  </p>
+                )}
                 {delivery.dropoff.notes && (
                   <p className="text-[13px] text-gold font-semibold mt-1.5 leading-snug">
                     Note: {delivery.dropoff.notes}
