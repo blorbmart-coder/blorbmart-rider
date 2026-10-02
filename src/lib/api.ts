@@ -237,6 +237,11 @@ export interface Delivery {
   /** On a scheduled order: when the customer wants it. Aim for this, not ASAP. */
   deliverByLabel?: string | null
   /**
+   * A customer's shopping list (an item with a note to shop from): the most
+   * the rider may spend on it. They enter what it cost at "I've paid".
+   */
+  listBudget?: number
+  /**
    * Whether the restaurant has taken this order on, read live from the order
    * rather than from a flag written when the job was broadcast. The cash offer
    * is only honest while this is false.
@@ -375,7 +380,9 @@ export const riderApi = {
 
   arrived: (id: string) => unwrap<Delivery>(api.post(`/api/rider/deliveries/${id}/arrived`)),
   claimSourcing: (id: string) => unwrap<Delivery>(api.post(`/api/rider/deliveries/${id}/claim-sourcing`)),
-  confirmPaid: (id: string) => unwrap<Delivery>(api.post(`/api/rider/deliveries/${id}/paid`)),
+  /** `listSpent`: what a customer's shopping list cost, on a list order. */
+  confirmPaid: (id: string, listSpent?: number) =>
+    unwrap<Delivery>(api.post(`/api/rider/deliveries/${id}/paid`, listSpent ? { listSpent } : {})),
   pickup: (id: string) => unwrap<Delivery>(api.post(`/api/rider/deliveries/${id}/pickup`)),
   // The position rides along so the customer has a real ETA the instant they
   // are told the rider left, rather than an empty panel until the next beat.

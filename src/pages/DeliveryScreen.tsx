@@ -213,6 +213,7 @@ export default function DeliveryScreen() {
   const queryClient = useQueryClient()
 
   const [busy, setBusy] = useState<string | null>(null)
+  const [listSpent, setListSpent] = useState('')
   const [showPin, setShowPin] = useState(false)
   const [showCancel, setShowCancel] = useState(false)
   const [showSourcing, setShowSourcing] = useState(false)
@@ -235,6 +236,7 @@ export default function DeliveryScreen() {
    * It runs only from pickup onward, which is the same window the backend
    * publishes tracking for.
    */
+  const listBudget = Number(delivery?.listBudget || 0)
   const carrying = delivery?.status === 'picked_up' || delivery?.status === 'on_the_way'
   const { coords } = usePresence({ online: carrying, intervalMs: TRIP_HEARTBEAT_MS })
 
@@ -463,10 +465,34 @@ export default function DeliveryScreen() {
                   {delivery.items.map((item, i) => (
                     <li key={i} className="flex gap-2 text-[14px] font-semibold">
                       <span className="text-ember-light tnum shrink-0">{item.quantity}×</span>
-                      <span className="min-w-0">{item.name}</span>
+                      <span className="min-w-0">
+                        {item.name}
+                        {/* A customer's shopping list: the note is the list. */}
+                        {listBudget > 0 && item.note && (
+                          <span className="block text-[13px] font-medium text-ink-soft whitespace-pre-line mt-0.5 selectable">
+                            {item.note}
+                          </span>
+                        )}
+                      </span>
                     </li>
                   ))}
                 </ul>
+                {listBudget > 0 && (
+                  <label className="block mt-4">
+                    <span className="text-[13px] text-ink-soft leading-snug block">
+                      The customer&rsquo;s list has a budget of{' '}
+                      <Money amount={listBudget} size="xs" className="!text-[13px]" />. Do not go over it. What did the
+                      list cost?
+                    </span>
+                    <input
+                      value={listSpent}
+                      onChange={(e) => setListSpent(e.target.value.replace(/[^\d]/g, '').slice(0, 6))}
+                      inputMode="numeric"
+                      placeholder="What you spent on the list, in naira"
+                      className="mt-2 w-full h-12 rounded-2xl bg-raised border border-line px-4 text-[16px] font-bold tnum"
+                    />
+                  </label>
+                )}
               </>
             ) : (
               <p className="text-[13px] text-ink-soft leading-relaxed mt-4">
@@ -489,7 +515,14 @@ export default function DeliveryScreen() {
               className="mt-4"
               loading={busy === 'paid'}
               icon={Banknote}
-              onClick={() => run('paid', () => riderApi.confirmPaid(id), 'Cash recorded — it is on its way back')}
+              disabled={listBudget > 0 && !(Number(listSpent) > 0 && Number(listSpent) <= listBudget)}
+              onClick={() =>
+                run(
+                  'paid',
+                  () => riderApi.confirmPaid(id, listBudget > 0 ? Number(listSpent) : undefined),
+                  'Cash recorded — it is on its way back',
+                )
+              }
             >
               I&rsquo;ve paid
             </Button>
