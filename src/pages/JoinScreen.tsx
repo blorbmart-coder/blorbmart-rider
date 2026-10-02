@@ -492,8 +492,8 @@ export default function JoinScreen() {
               },
               {
                 icon: Zap,
-                title: 'Plus a bonus on top',
-                body: 'You earn the delivery fee as normal, and an extra bonus for covering the order. The bigger the order, the bigger the bonus.',
+                title: 'Your delivery pay as normal',
+                body: 'You earn your share of the delivery fee as on any job. The money you spend on the order is paid back exactly, to the naira.',
               },
               {
                 icon: BadgeCheck,

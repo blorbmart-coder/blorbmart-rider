@@ -217,10 +217,8 @@ export default function OfferCard({
                 ) : (
                   <>
                     <span className="font-bold text-ember-light">Buy the items at the market.</span> Spend{' '}
-                    <Money amount={offer.payout.cashToPay} size="xs" tone="ink" className="!text-[12px]" /> and get it
-                    all back on delivery, with a{' '}
-                    <Money amount={offer.payout.potentialSourcingBonus} size="xs" tone="ink" className="!text-[12px]" />{' '}
-                    bonus already in the figure above.
+                    <Money amount={offer.payout.cashToPay} size="xs" tone="ink" className="!text-[12px]" /> and get
+                    every naira back on delivery, on top of what you earn above.
                   </>
                 )}
               </p>

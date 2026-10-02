@@ -139,8 +139,8 @@ export default function AccountScreen() {
               <>
                 <Money amount={sourcing.limit} size="xl" tone="ember" />
                 <p className="text-[13px] text-ink-soft leading-relaxed mt-3">
-                  You can cover orders up to this amount when a restaurant does not respond. Every naira comes
-                  back on delivery, plus a bonus.
+                  You can cover orders up to this amount when a restaurant does not respond. Every naira you
+                  spend comes back on delivery.
                 </p>
                 {sourcing.nextLimit && sourcing.deliveriesToNextTier !== null && (
                   <div className="mt-5">
@@ -160,8 +160,8 @@ export default function AccountScreen() {
               <>
                 <p className="text-[13px] text-ink-soft leading-relaxed">
                   Complete {sourcing.deliveriesToNextTier ?? 3} more deliver
-                  {(sourcing.deliveriesToNextTier ?? 3) === 1 ? 'y' : 'ies'} to unlock covering orders yourself —
-                  it pays a bonus on top of the delivery fee.
+                  {(sourcing.deliveriesToNextTier ?? 3) === 1 ? 'y' : 'ies'} to unlock covering orders yourself
+                  and market runs.
                 </p>
                 {sourcing.deliveriesToNextTier !== null && (
                   <div className="mt-4">

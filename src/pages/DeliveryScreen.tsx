@@ -421,13 +421,8 @@ export default function DeliveryScreen() {
                     The kitchen hasn&rsquo;t responded
                   </p>
                   <p className="text-[13px] text-ink-soft leading-relaxed mt-1.5">
-                    Pay for the food yourself and earn an extra{' '}
-                    <Money
-                      amount={delivery.payout.potentialSourcingBonus}
-                      size="xs"
-                      tone="ember"
-                    />{' '}
-                    on top. Every naira comes back to your wallet when you deliver.
+                    You can pay for the food yourself so the customer is not kept waiting. Every naira comes back
+                    to your wallet when you deliver.
                   </p>
                 </div>
               </div>
@@ -724,8 +719,7 @@ export default function DeliveryScreen() {
       <Sheet open={showSourcing} onClose={() => setShowSourcing(false)} title="Cover this order?">
         <p className="text-[15px] text-ink-soft leading-relaxed">
           You&rsquo;ll pay <Money amount={delivery.cashToPay} size="xs" className="!text-[15px]" /> at the counter
-          out of your own pocket. It returns to your wallet in full the second the customer confirms delivery —
-          plus a bonus for covering it.
+          out of your own pocket. It returns to your wallet in full the second the customer confirms delivery.
         </p>
         <div className="mt-5 rounded-2xl bg-raised border border-line p-4 space-y-3">
           <div className="flex items-center justify-between">
@@ -739,7 +733,7 @@ export default function DeliveryScreen() {
           <div className="flex items-center justify-between pt-3 border-t border-line">
             <span className="text-[14px] font-bold">You keep</span>
             <Money
-              amount={delivery.payout.deliveryEarning + delivery.payout.potentialSourcingBonus}
+              amount={delivery.payout.deliveryEarning}
               size="md"
               tone="volt"
             />
