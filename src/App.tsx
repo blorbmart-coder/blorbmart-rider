@@ -34,6 +34,8 @@ const EarningsScreen = lazy(() => import('./pages/EarningsScreen'))
 const HistoryScreen = lazy(() => import('./pages/HistoryScreen'))
 const AccountScreen = lazy(() => import('./pages/AccountScreen'))
 const BillsScreen = lazy(() => import('./pages/BillsScreen'))
+const TransactionScreen = lazy(() => import('./pages/TransactionScreen'))
+const NotificationsScreen = lazy(() => import('./pages/NotificationsScreen'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -183,6 +185,23 @@ function AppRoutes() {
         element={
           <Guarded>
             <EarningsScreen />
+          </Guarded>
+        }
+      />
+      {/* One wallet entry, by ?id= or from a notification (?deliveryId= / ?withdrawalId=). */}
+      <Route
+        path="/earnings/tx"
+        element={
+          <Guarded>
+            <TransactionScreen />
+          </Guarded>
+        }
+      />
+      <Route
+        path="/notifications"
+        element={
+          <Guarded>
+            <NotificationsScreen />
           </Guarded>
         }
       />

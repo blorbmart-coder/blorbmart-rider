@@ -318,6 +318,56 @@ export interface WalletTransaction {
   createdAt: { _seconds?: number } | string | null
 }
 
+/** One wallet entry in full — see GET /api/rider/wallet/transaction. */
+export interface TransactionDetail {
+  transaction: {
+    id: string
+    type: WalletTransaction['type']
+    direction: 'in' | 'out'
+    amount: number
+    balanceAfter: number | null
+    reference: string | null
+    description: string | null
+    orderId: string | null
+    deliveryId: string | null
+    withdrawalId: string | null
+    createdAt: number | null
+  }
+  delivery: {
+    id: string
+    orderId: string | null
+    storeName: string | null
+    dropoffArea: string | null
+    mode: 'delivery' | 'sourcing'
+    status: string | null
+    cashPaidAmount: number
+    deliveredAt: number | null
+  } | null
+  related: TransactionDetail['transaction'][]
+  withdrawal: {
+    id: string
+    status: string | null
+    bankName: string | null
+    accountName: string | null
+    accountMasked: string | null
+    failureReason: string | null
+    reference: string | null
+    initiatedAt: number | null
+    completedAt: number | null
+  } | null
+}
+
+export interface RiderNotification {
+  id: string
+  title: string
+  message: string
+  type: string
+  status: 'read' | 'unread' | string
+  metadata: Record<string, unknown>
+  actionUrl: string | null
+  createdAt: number | null
+}
+
 export interface Withdrawal {
   id: string
   amount: number
@@ -418,6 +468,15 @@ export const riderApi = {
     unwrap<{ transactions: WalletTransaction[]; nextCursor: string | null }>(
       api.get('/api/rider/wallet/transactions', { params: { cursor: cursor ?? undefined } }),
     ),
+
+  /** One entry: by id, or by the delivery or withdrawal a notification names. */
+  transaction: (query: { id?: string; deliveryId?: string; withdrawalId?: string }) =>
+    unwrap<TransactionDetail>(api.get('/api/rider/wallet/transaction', { params: query })),
+
+  notifications: () =>
+    unwrap<{ notifications: RiderNotification[]; unread: number }>(api.get('/api/rider/notifications')),
+  /** One by id, or every unread one when no id is given. */
+  readNotifications: (id?: string) => api.post('/api/rider/notifications/read', id ? { id } : {}),
 
   setPin: (pin: string) => api.post('/api/rider/wallet/pin/setup', { pin }),
   changePin: (currentPin: string, newPin: string) =>

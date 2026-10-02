@@ -51,7 +51,7 @@ import { money, timeAgo } from '../lib/format'
  * accurate and useless.
  */
 
-const TX_META: Record<string, { label: string; icon: typeof Banknote; tone: 'volt' | 'ember' | 'iris' | 'gold' | 'neutral' }> = {
+export const TX_META: Record<string, { label: string; icon: typeof Banknote; tone: 'volt' | 'ember' | 'iris' | 'gold' | 'neutral' }> = {
   delivery_earning: { label: 'Delivery', icon: Bike, tone: 'volt' },
   sourcing_bonus: { label: 'Cash-front bonus', icon: Zap, tone: 'ember' },
   reimbursement: { label: 'Your cash back', icon: HandCoins, tone: 'iris' },
@@ -65,11 +65,18 @@ const TX_META: Record<string, { label: string; icon: typeof Banknote; tone: 'vol
 }
 
 function TransactionRow({ transaction }: { transaction: WalletTransaction }) {
+  const navigate = useNavigate()
   const meta = TX_META[transaction.type] ?? TX_META.adjustment
   const outgoing = transaction.direction === 'out'
 
   return (
-    <li className="flex items-center gap-3 py-3.5">
+    <li
+      className="flex items-center gap-3 py-3.5 cursor-pointer active:opacity-70"
+      role="button"
+      tabIndex={0}
+      onClick={() => navigate(`/earnings/tx?id=${encodeURIComponent(transaction.id)}`)}
+      onKeyDown={(e) => e.key === 'Enter' && navigate(`/earnings/tx?id=${encodeURIComponent(transaction.id)}`)}
+    >
       <IconBadge icon={meta.icon} tone={meta.tone} size="sm" />
       <div className="flex-1 min-w-0">
         <p className="font-bold text-[14px] truncate">{meta.label}</p>

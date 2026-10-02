@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import {
   ArrowRight,
+  Bell as BellIcon,
   ChevronRight,
   Flame,
   MapPinOff,
@@ -184,6 +185,7 @@ export default function DashboardScreen() {
                   {earnings?.streakDays} day streak
                 </Chip>
               )}
+              <NotificationBell />
               {/* Personal safety between jobs; a live delivery is attached by
                   the server if there is one. */}
               <SosButton coords={null} />
@@ -339,7 +341,7 @@ export default function DashboardScreen() {
             <p className="text-[13px] text-ink-soft leading-snug mt-3">
               {sourcing.deliveriesToNextTier} more deliver
               {sourcing.deliveriesToNextTier === 1 ? 'y' : 'ies'} and you can start covering orders the kitchen
-              misses — worth an extra bonus every time.
+              misses, and doing market runs.
             </p>
           </Card>
         )}
@@ -441,5 +443,26 @@ export default function DashboardScreen() {
         )}
       </main>
     </div>
+  )
+}
+
+/** The way into notifications, with the unread count on it. */
+function NotificationBell() {
+  const navigate = useNavigate()
+  const list = useQuery({ queryKey: ['rider-notifications'], queryFn: riderApi.notifications, refetchInterval: 60_000 })
+  const unread = list.data?.unread ?? 0
+  return (
+    <button
+      onClick={() => navigate('/notifications')}
+      aria-label={unread ? `Notifications, ${unread} unread` : 'Notifications'}
+      className="relative w-10 h-10 rounded-2xl bg-raised border border-line flex items-center justify-center"
+    >
+      <BellIcon className="w-5 h-5" aria-hidden />
+      {unread > 0 && (
+        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-volt text-void text-[10.5px] font-bold flex items-center justify-center">
+          {unread > 9 ? '9+' : unread}
+        </span>
+      )}
+    </button>
   )
 }
