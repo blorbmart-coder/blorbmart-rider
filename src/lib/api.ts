@@ -126,6 +126,10 @@ export interface Rider {
   verification?: { status: VerificationStatus; reason?: string | null } | null
   /** When true the backend refuses jobs until campus ops verifies the rider. */
   verificationRequired?: boolean
+  /** How identity is checked: Didit's ID scan and liveness, or photos campus ops looks at. */
+  identityCheck?: 'didit' | 'photos'
+  /** The rider's Didit session, once started. `status` is Didit's own word for it. */
+  kyc?: { provider: 'didit'; sessionId?: string; status?: string } | null
 }
 
 export type VerificationStatus = 'unverified' | 'pending' | 'verified' | 'rejected'
@@ -349,6 +353,13 @@ export const riderApi = {
 
   saveStep: (step: OnboardingStep, payload: Record<string, unknown>) =>
     unwrap<Rider>(api.post(`/api/rider/onboarding/${step}`, payload)),
+
+  /** Opens (or resumes) a Didit ID check; send the rider to `url`. */
+  startDidit: (returnTo: '/onboarding' | '/account') =>
+    unwrap<{ url: string; status: string }>(api.post('/api/rider/verification/didit', { returnTo })),
+
+  /** Reads the Didit result on the way back, in case the webhook is late. */
+  syncDidit: () => unwrap<Rider>(api.post('/api/rider/verification/didit/sync')),
 
   /** Sends a selfie and ID photo (already uploaded) for campus ops to check. */
   submitVerification: (body: { selfieUrl: string; idImageUrl: string; idType?: string; idNumber?: string }) =>

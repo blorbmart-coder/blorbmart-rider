@@ -1,5 +1,6 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 import {
   BadgeCheck,
@@ -38,7 +39,23 @@ const VEHICLE_LABEL: Record<string, string> = {
 
 export default function AccountScreen() {
   const navigate = useNavigate()
-  const { rider, logout } = useRider()
+  const { rider, logout, setRider } = useRider()
+
+  // Back from Didit (?kyc=done): read the result now rather than wait for
+  // the webhook, then drop the marker so a reload does not ask again.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('kyc') !== 'done') return
+    window.history.replaceState(window.history.state, '', window.location.pathname)
+    riderApi
+      .syncDidit()
+      .then((updated) => {
+        setRider(updated)
+        if (updated.verified) toast.success('Your ID passed. You are verified.')
+        else if (updated.verificationStatus === 'pending') toast.success('Your ID check is in. We will let you know.')
+      })
+      .catch(() => {})
+  }, [setRider])
   const installed = useInstalled()
   const [verifyOpen, setVerifyOpen] = useState(false)
   const [contactOpen, setContactOpen] = useState(false)
@@ -254,21 +271,24 @@ function VerifyCard({ rider, onOpen }: { rider: Rider; onOpen: () => void }) {
   const copy =
     status === 'pending'
       ? {
-          title: 'Your photos are being checked',
-          body: 'Campus ops is matching your selfie to your ID. You will get a notification when it is done.',
+          title: rider.identityCheck === 'didit' ? 'Your ID is being checked' : 'Your photos are being checked',
+          body:
+            rider.identityCheck === 'didit'
+              ? 'Didit is reviewing your ID and selfie. You will get a notification when it is done.'
+              : 'Campus ops is matching your selfie to your ID. You will get a notification when it is done.',
           tone: 'gold' as const,
         }
       : status === 'rejected'
         ? {
-            title: 'Your photos need another look',
+            title: rider.identityCheck === 'didit' ? 'Your ID check did not pass' : 'Your photos need another look',
             body: rider.verification?.reason ?? 'Campus ops could not verify them. Send a clearer selfie and ID photo.',
             tone: 'ember' as const,
           }
         : {
             title: 'Get verified',
             body: rider.verificationRequired
-              ? 'You need a verified photo to take jobs. Send a selfie and a photo of your ID.'
-              : 'Customers see your photo and a verified mark when you are on the way. Send a selfie and a photo of your ID.',
+              ? `You need to be verified to take jobs. ${rider.identityCheck === 'didit' ? 'Scan your ID and take a video selfie.' : 'Send a selfie and a photo of your ID.'}`
+              : `Customers see your photo and a verified mark when you are on the way. ${rider.identityCheck === 'didit' ? 'Scan your ID and take a video selfie.' : 'Send a selfie and a photo of your ID.'}`,
             tone: 'iris' as const,
           }
   return (
@@ -281,7 +301,7 @@ function VerifyCard({ rider, onOpen }: { rider: Rider; onOpen: () => void }) {
       {status !== 'pending' && (
         <div className="mt-4">
           <Button variant="volt" fullWidth icon={Camera} onClick={onOpen}>
-            {status === 'rejected' ? 'Send new photos' : 'Get verified'}
+            {status === 'rejected' ? (rider.identityCheck === 'didit' ? 'Try again' : 'Send new photos') : 'Get verified'}
           </Button>
         </div>
       )}

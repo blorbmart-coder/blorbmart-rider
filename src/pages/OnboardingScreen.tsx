@@ -16,7 +16,7 @@ import { riderApi, errorMessage, type OnboardingStep, type University, type Vehi
 import { useRider } from '../contexts/RiderContext'
 import { Button, Field, IconBadge, SelectField, cn } from '../components/ui'
 import { BurstScene, GlowField } from '../components/art'
-import { PhotoPair } from '../components/Safety'
+import { DiditButton, PhotoPair } from '../components/Safety'
 
 /**
  * Onboarding.
@@ -103,6 +103,18 @@ export default function OnboardingScreen() {
       cancelled = true
     }
   }, [])
+
+  // Back from Didit (?kyc=done): read the result now rather than wait for
+  // the webhook, then drop the marker so a reload does not ask again.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('kyc') !== 'done') return
+    window.history.replaceState(window.history.state, '', window.location.pathname)
+    riderApi
+      .syncDidit()
+      .then(setRider)
+      .catch(() => {})
+  }, [setRider])
 
   const save = async (step: OnboardingStep, payload: Record<string, unknown>) => {
     setBusy(true)
@@ -380,6 +392,16 @@ export default function OnboardingScreen() {
                 road.
               </p>
 
+              {rider?.identityCheck === 'didit' ? (
+                <DiditStep
+                  status={rider.kyc?.sessionId ? rider.kyc.status ?? 'Not Started' : null}
+                  reason={rider.verification?.reason ?? null}
+                  busy={busy}
+                  error={fieldError}
+                  onContinue={() => save('identity', { didit: true })}
+                />
+              ) : (
+              <>
               <div className="mt-8 space-y-4">
                 <SelectField label="ID type" value={idType} onChange={(event) => setIdType(event.target.value)}>
                   {ID_TYPES.map((type) => (
@@ -426,6 +448,8 @@ export default function OnboardingScreen() {
                   Continue
                 </Button>
               </div>
+              </>
+              )}
             </motion.div>
           )}
 
@@ -475,6 +499,62 @@ export default function OnboardingScreen() {
           )}
         </AnimatePresence>
       </main>
+    </div>
+  )
+}
+
+/**
+ * The identity step when Didit checks IDs: start the check, and once it has
+ * been started, carry on — the result arrives by notification, and a rider
+ * can start earning while it is being reviewed.
+ */
+function DiditStep({
+  status,
+  reason,
+  busy,
+  error,
+  onContinue,
+}: {
+  status: string | null
+  reason: string | null
+  busy: boolean
+  error: string | null
+  onContinue: () => void
+}) {
+  const lapsed = status === 'Abandoned' || status === 'Expired' || status === 'Kyc Expired'
+  const declined = status === 'Declined'
+  const started = status !== null && status !== 'Not Started' && !lapsed && !declined
+  return (
+    <div className="mt-8 space-y-4">
+      {status === null || status === 'Not Started' || lapsed ? (
+        <>
+          <p className="text-[14px] leading-relaxed text-ink-soft">
+            Scan your ID and take a quick video selfie with Didit, our verification partner. It takes about two minutes.
+            Have your original ID with you and find good light.
+          </p>
+          {lapsed && <p className="text-[13px] text-gold">Your last check was not finished. Start it again.</p>}
+          <DiditButton returnTo="/onboarding" />
+        </>
+      ) : declined ? (
+        <>
+          <p className="rounded-2xl border border-ember/30 bg-ember/8 p-3.5 text-[13px] leading-snug text-ember-light">
+            Your ID check did not pass{reason ? `: ${reason}` : '.'}
+          </p>
+          <DiditButton returnTo="/onboarding" label="Try again" />
+        </>
+      ) : (
+        <p className="rounded-2xl border border-volt/30 bg-volt/8 p-3.5 text-[14px] leading-snug">
+          {status === 'Approved'
+            ? 'Your ID passed. You are verified.'
+            : 'Your ID check is in. We will tell you as soon as it is approved — you can carry on meanwhile.'}
+        </p>
+      )}
+      {error && <p className="text-[13px] text-ember-light">{error}</p>}
+      {started && (
+        <Button variant="volt" size="lg" fullWidth loading={busy} iconRight={ArrowRight} onClick={onContinue}>
+          Continue
+        </Button>
+      )}
     </div>
   )
 }

@@ -119,6 +119,29 @@ function PhotoTile({
 /* ── Verification ───────────────────────────────────────────────────────── */
 
 /** The account screen's "get verified" sheet. */
+/**
+ * Sends the rider to Didit's ID scan and liveness check. Didit brings them
+ * back to `returnTo` with ?kyc=done, where the result is read.
+ */
+export function DiditButton({ returnTo, label = 'Verify my ID' }: { returnTo: '/onboarding' | '/account'; label?: string }) {
+  const [opening, setOpening] = useState(false)
+  const start = async () => {
+    setOpening(true)
+    try {
+      const { url } = await riderApi.startDidit(returnTo)
+      window.location.assign(url)
+    } catch (error) {
+      toast.error(errorMessage(error, 'Could not start your ID check.'))
+      setOpening(false)
+    }
+  }
+  return (
+    <Button variant="volt" size="lg" fullWidth icon={ScanFace} loading={opening} onClick={() => void start()}>
+      {label}
+    </Button>
+  )
+}
+
 export function VerificationSheet({ open, onClose, rider }: { open: boolean; onClose: () => void; rider: Rider }) {
   const { setRider } = useRider()
   const [selfie, setSelfie] = useState<string | null>(null)
@@ -145,6 +168,28 @@ export function VerificationSheet({ open, onClose, rider }: { open: boolean; onC
     } finally {
       setSending(false)
     }
+  }
+
+  if (rider.identityCheck === 'didit') {
+    return (
+      <Sheet open={open} onClose={onClose} title="Get verified">
+        <div className="space-y-5">
+          <p className="text-[14px] leading-relaxed text-ink-soft">
+            Scan your ID and take a quick video selfie with Didit, our verification partner. It takes about two
+            minutes. Once it passes, customers see your photo and a verified mark when you are on the way.
+          </p>
+          {rider.verificationStatus === 'rejected' && reason && (
+            <p className="rounded-2xl border border-ember/30 bg-ember/8 p-3.5 text-[13px] leading-snug text-ember-light">
+              Last time: {reason}
+            </p>
+          )}
+          <p className="text-[13px] leading-relaxed text-ink-faint">
+            Have your original ID with you, and find good light. Use your phone — the check needs its camera.
+          </p>
+          <DiditButton returnTo="/account" label={rider.verificationStatus === 'rejected' ? 'Try again' : 'Verify my ID'} />
+        </div>
+      </Sheet>
+    )
   }
 
   return (
