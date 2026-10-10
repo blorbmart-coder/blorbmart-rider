@@ -29,6 +29,8 @@ import { BrandMark, GlowField } from '../components/art'
 import { initials, money } from '../lib/format'
 import { EmergencyContactSheet, SosSheet, VerificationSheet } from '../components/Safety'
 import { LegalViewer, supportEmailUrl, supportWhatsAppUrl, type LegalDoc } from '../components/LegalViewer'
+import { IdentityVerificationRow } from './IdentityVerificationScreen'
+import { identityVerificationEnabled } from '../lib/identityVerificationConfig'
 
 const VEHICLE_LABEL: Record<string, string> = {
   foot: 'On foot',
@@ -45,6 +47,12 @@ export default function AccountScreen() {
   // the webhook, then drop the marker so a reload does not ask again.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
+    if (identityVerificationEnabled && params.get('verification') === 'complete') {
+      window.history.replaceState(window.history.state, '', window.location.pathname)
+      if (identityVerificationEnabled) navigate('/account/identity-verification', { replace: true })
+      return
+    }
+    if (identityVerificationEnabled) return
     if (params.get('kyc') !== 'done') return
     window.history.replaceState(window.history.state, '', window.location.pathname)
     riderApi
@@ -55,7 +63,7 @@ export default function AccountScreen() {
         else if (updated.verificationStatus === 'pending') toast.success('Your ID check is in. We will let you know.')
       })
       .catch(() => {})
-  }, [setRider])
+  }, [navigate, setRider])
   const installed = useInstalled()
   const [verifyOpen, setVerifyOpen] = useState(false)
   const [contactOpen, setContactOpen] = useState(false)
@@ -177,7 +185,7 @@ export default function AccountScreen() {
           </Card>
         )}
 
-        {rider && !rider.verified && <VerifyCard rider={rider} onOpen={() => setVerifyOpen(true)} />}
+        {!identityVerificationEnabled && rider && <VerifyCard rider={rider} onOpen={() => setVerifyOpen(true)} />}
 
         <Card variant="solid" className="py-1.5 overflow-hidden">
           <Row icon={Wallet} label="Wallet and cashouts" tone="volt" onClick={() => navigate('/earnings')} />
@@ -185,6 +193,12 @@ export default function AccountScreen() {
           <Row icon={Bike} label="Vehicle" value={VEHICLE_LABEL[rider?.vehicleType ?? ''] ?? 'Not set'} />
           <div className="h-px bg-line-soft mx-4" />
           <Row icon={GraduationCap} label="School" value={rider?.campus?.school ?? 'Not set'} />
+          {identityVerificationEnabled && rider && (
+            <>
+              <div className="h-px bg-line-soft mx-4" />
+              <IdentityVerificationRow />
+            </>
+          )}
         </Card>
 
         {/* Installing is what makes push notifications work on iOS at all —
@@ -257,7 +271,9 @@ export default function AccountScreen() {
         </div>
       </main>
 
-      {rider && <VerificationSheet open={verifyOpen} onClose={() => setVerifyOpen(false)} rider={rider} />}
+      {!identityVerificationEnabled && rider && (
+        <VerificationSheet open={verifyOpen} onClose={() => setVerifyOpen(false)} rider={rider} />
+      )}
       <EmergencyContactSheet open={contactOpen} onClose={() => setContactOpen(false)} />
       <SosSheet open={sosOpen} onClose={() => setSosOpen(false)} coords={null} />
       <LegalViewer doc={legal} onClose={closeLegal} />

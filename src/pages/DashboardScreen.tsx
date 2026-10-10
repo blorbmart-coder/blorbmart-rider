@@ -26,6 +26,7 @@ import { Button, Card, Chip, EmptyState, IconBadge, Money, ProgressBar, SectionT
 import { GlowField, NightScene, RadarScene } from '../components/art'
 import OfferCard from '../components/OfferCard'
 import { initials } from '../lib/format'
+import { isIdentityVerificationRefusal, showIdentityVerificationPrompt } from './IdentityVerificationScreen'
 
 /** Nobody is "good morning"-ed at 2am. The greeting tracks the shift. */
 const greeting = () => {
@@ -120,7 +121,11 @@ export default function DashboardScreen() {
         void enablePush()
       }
     } catch (error) {
-      toast.error(errorMessage(error, 'Could not change your status.'))
+      if (isIdentityVerificationRefusal(error)) {
+        showIdentityVerificationPrompt(navigate, error)
+      } else {
+        toast.error(errorMessage(error, 'Could not change your status.'))
+      }
     } finally {
       setToggling(false)
     }
@@ -134,7 +139,11 @@ export default function DashboardScreen() {
       toast.success('Job is yours')
       navigate(`/delivery/${delivery.id}`)
     } catch (error) {
-      toast.error(errorMessage(error, 'Could not take that job.'))
+      if (isIdentityVerificationRefusal(error)) {
+        showIdentityVerificationPrompt(navigate, error)
+      } else {
+        toast.error(errorMessage(error, 'Could not take that job.'))
+      }
       await refetchActive()
     } finally {
       setAcceptingId(null)
