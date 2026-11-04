@@ -250,6 +250,9 @@ export default function DeliveryScreen() {
   }, [delivery])
 
   const run = async (key: string, action: () => Promise<unknown>, success?: string) => {
+    // One step at a time: "Arrived" and "Collected" tapped back to back must
+    // not race each other to the server.
+    if (busy) return
     setBusy(key)
     try {
       await action()

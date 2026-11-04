@@ -182,6 +182,8 @@ export default function AccountScreen() {
         <Card variant="solid" className="py-1.5 overflow-hidden">
           <Row icon={Wallet} label="Wallet and cashouts" tone="volt" onClick={() => navigate('/earnings')} />
           <div className="h-px bg-line-soft mx-4" />
+          <Row icon={Star} label="Your ratings" tone="volt" onClick={() => navigate('/ratings')} />
+          <div className="h-px bg-line-soft mx-4" />
           <Row icon={Bike} label="Vehicle" value={VEHICLE_LABEL[rider?.vehicleType ?? ''] ?? 'Not set'} />
           <div className="h-px bg-line-soft mx-4" />
           <Row icon={GraduationCap} label="School" value={rider?.campus?.school ?? 'Not set'} />

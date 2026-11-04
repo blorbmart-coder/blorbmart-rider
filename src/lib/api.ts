@@ -380,6 +380,16 @@ export interface Withdrawal {
 
 const unwrap = <T,>(promise: Promise<{ data: { data: T } }>) => promise.then((res) => res.data.data)
 
+export interface RiderRatingReport {
+  count: number
+  average: number | null
+  positive: number
+  negative: number
+  compliments: { tag: string; count: number }[]
+  complaints: { tag: string; count: number }[]
+  comments: { stars: number; comment: string; month: string }[]
+}
+
 export const riderApi = {
   /**
    * Given its own, longer timeout.
@@ -473,6 +483,9 @@ export const riderApi = {
   transaction: (query: { id?: string; deliveryId?: string; withdrawalId?: string }) =>
     unwrap<TransactionDetail>(api.get('/api/rider/wallet/transaction', { params: query })),
 
+  /** The rider's own feedback report (GET /api/ratings/me/rider-report). */
+  ratingsReport: (days = 30) =>
+    unwrap<RiderRatingReport | null>(api.get('/api/ratings/me/rider-report', { params: { days } })),
   notifications: () =>
     unwrap<{ notifications: RiderNotification[]; unread: number }>(api.get('/api/rider/notifications')),
   /** One by id, or every unread one when no id is given. */

@@ -36,6 +36,7 @@ const AccountScreen = lazy(() => import('./pages/AccountScreen'))
 const BillsScreen = lazy(() => import('./pages/BillsScreen'))
 const TransactionScreen = lazy(() => import('./pages/TransactionScreen'))
 const NotificationsScreen = lazy(() => import('./pages/NotificationsScreen'))
+const RatingsScreen = lazy(() => import('./pages/RatingsScreen'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -202,6 +203,14 @@ function AppRoutes() {
         element={
           <Guarded>
             <NotificationsScreen />
+          </Guarded>
+        }
+      />
+      <Route
+        path="/ratings"
+        element={
+          <Guarded>
+            <RatingsScreen />
           </Guarded>
         }
       />
