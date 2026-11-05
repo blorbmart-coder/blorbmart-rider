@@ -130,6 +130,10 @@ export interface Rider {
   identityCheck?: 'didit' | 'photos'
   /** The rider's Didit session, once started. `status` is Didit's own word for it. */
   kyc?: { provider: 'didit'; sessionId?: string; status?: string } | null
+  riderVerification?: {
+    status?: 'not_started' | 'pending' | 'approved' | 'declined' | 'needs_review' | string | null
+    providerReferenceId?: string | null
+  } | null
 }
 
 export type VerificationStatus = 'unverified' | 'pending' | 'verified' | 'rejected'
@@ -417,6 +421,11 @@ export const riderApi = {
   /** Opens (or resumes) a Didit ID check; send the rider to `url`. */
   startDidit: (returnTo: '/onboarding' | '/account') =>
     unwrap<{ url: string; status: string }>(api.post('/api/rider/verification/didit', { returnTo })),
+
+  startIdentityVerification: () =>
+    unwrap<{ url: string; providerReferenceId: string; status: string }>(
+      api.post('/api/rider/verification/didit', { returnTo: '/account' }),
+    ),
 
   /** Reads the Didit result on the way back, in case the webhook is late. */
   syncDidit: () => unwrap<Rider>(api.post('/api/rider/verification/didit/sync')),

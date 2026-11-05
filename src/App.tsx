@@ -8,6 +8,7 @@ import AppShell from './components/AppShell'
 import { Button, IconBadge } from './components/ui'
 import { BrandMarkDraw, GlowField, useMarkStillDrawing } from './components/art'
 import { applyRouteMeta } from './lib/seo'
+import { identityVerificationEnabled } from './lib/identityVerificationConfig'
 
 /** Keeps the title, canonical URL and robots rule in step with the route. */
 function RouteMeta() {
@@ -37,6 +38,7 @@ const BillsScreen = lazy(() => import('./pages/BillsScreen'))
 const TransactionScreen = lazy(() => import('./pages/TransactionScreen'))
 const NotificationsScreen = lazy(() => import('./pages/NotificationsScreen'))
 const RatingsScreen = lazy(() => import('./pages/RatingsScreen'))
+const IdentityVerificationScreen = lazy(() => import('./pages/IdentityVerificationScreen'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -235,6 +237,14 @@ function AppRoutes() {
         element={
           <Guarded>
             <AccountScreen />
+          </Guarded>
+        }
+      />
+      <Route
+        path="/account/identity-verification"
+        element={
+          <Guarded>
+            {identityVerificationEnabled ? <IdentityVerificationScreen /> : <Navigate to="/account" replace />}
           </Guarded>
         }
       />
