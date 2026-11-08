@@ -19,6 +19,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import {
+  billFee,
   billsApi,
   errorMessage,
   riderApi,
@@ -185,7 +186,7 @@ export default function BillsScreen() {
   })
 
   const value = plan ? plan.amount : Number(amount) || 0
-  const fee = service?.fee ?? 0
+  const fee = billFee(service, value)
   const total = value + fee
   const available = wallet?.availableBalance ?? 0
 
@@ -598,7 +599,7 @@ export default function BillsScreen() {
                 ['Includes', details.details && details.details !== details.size ? details.details : ''],
                 ['Valid for', details.validity || details.periodLabel || ''],
                 ['Price', money(details.amount)],
-                ['Fee', fee > 0 ? money(fee) : ''],
+                ['Fee', billFee(service, details.amount) > 0 ? money(billFee(service, details.amount)) : ''],
               ]
                 .filter(([, value]) => value)
                 .map(([label, value]) => (
@@ -609,7 +610,7 @@ export default function BillsScreen() {
                 ))}
               <div className="flex justify-between items-baseline pt-2 border-t border-line-soft">
                 <span className="font-bold">You pay</span>
-                <Money amount={details.amount + fee} size="md" />
+                <Money amount={details.amount + billFee(service, details.amount)} size="md" />
               </div>
             </div>
             <Button

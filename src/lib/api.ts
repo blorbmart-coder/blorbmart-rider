@@ -539,6 +539,16 @@ export interface BillService {
   min?: number
   max?: number
   fee: number
+  /** Large bills pay per started block of value; absent/null = `fee` is the whole fee. */
+  feeRule?: { flat: number; every: number; perBlock: number } | null
+}
+
+/** The fee on a purchase of `amount` naira, as the backend will charge it. */
+export function billFee(s: BillService | null | undefined, amount: number): number {
+  if (!s) return 0
+  const r = s.feeRule
+  if (!r || !(r.every > 0)) return s.fee ?? 0
+  return (r.flat ?? 0) + Math.max(1, Math.ceil(amount / r.every)) * r.perBlock
 }
 
 export interface BillPlan {
