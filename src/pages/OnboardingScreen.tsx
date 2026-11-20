@@ -16,7 +16,7 @@ import { riderApi, errorMessage, type OnboardingStep, type University, type Vehi
 import { useRider } from '../contexts/RiderContext'
 import { Button, Field, IconBadge, SelectField, cn } from '../components/ui'
 import { BurstScene, GlowField } from '../components/art'
-import { DiditButton, PhotoPair } from '../components/Safety'
+import { DiditButton, StudentIdForm } from '../components/Safety'
 
 /**
  * Onboarding.
@@ -45,8 +45,6 @@ const VEHICLES: { value: VehicleType; label: string; note: string; icon: typeof 
   { value: 'car', label: 'Car', note: 'Big orders and bad weather', icon: Car },
 ]
 
-const ID_TYPES = ['Student ID', 'National ID (NIN)', "Driver's licence", 'Voter card', 'International passport']
-
 const slide = {
   enter: { opacity: 0, x: 24 },
   center: { opacity: 1, x: 0 },
@@ -72,11 +70,6 @@ export default function OnboardingScreen() {
 
   const [vehicleType, setVehicleType] = useState<VehicleType | null>(rider?.vehicleType ?? null)
   const [plateNumber, setPlateNumber] = useState(rider?.plateNumber ?? '')
-
-  const [idType, setIdType] = useState(ID_TYPES[0])
-  const [idNumber, setIdNumber] = useState('')
-  const [selfieUrl, setSelfieUrl] = useState<string | null>(null)
-  const [idImageUrl, setIdImageUrl] = useState<string | null>(null)
 
   const [fieldError, setFieldError] = useState<string | null>(null)
 
@@ -125,10 +118,12 @@ export default function OnboardingScreen() {
       if (step === 'payout') {
         setDone(true)
       }
+      return true
     } catch (error) {
       const message = errorMessage(error, 'Could not save that. Try again.')
       setFieldError(message)
       toast.error(message)
+      return false
     } finally {
       setBusy(false)
     }
@@ -158,7 +153,9 @@ export default function OnboardingScreen() {
           You&rsquo;re in.
         </h1>
         <p className="relative mt-4 text-ink-soft leading-relaxed max-w-xs">
-          Flip yourself online and orders start arriving. Your first three deliveries unlock the higher earnings.
+          {rider?.verificationRequired && !rider?.verified
+            ? 'The campus team is checking your student ID. We will notify you the moment you are approved, then you can start taking jobs.'
+            : 'Flip yourself online and orders start arriving. Your first three deliveries unlock the higher earnings.'}
         </p>
         <div className="relative mt-9 w-full max-w-sm">
           <Button variant="volt" size="lg" fullWidth icon={Power} onClick={finish}>
@@ -388,8 +385,8 @@ export default function OnboardingScreen() {
                 Show us it&rsquo;s you.
               </h1>
               <p className="mt-3 text-ink-soft leading-relaxed">
-                Customers are handing you their food and sometimes their money. This is how we know who is on the
-                road.
+                Your student ID and a selfie — the same check student sellers do. The campus team approves you,
+                usually the same day.
               </p>
 
               {rider?.identityCheck === 'didit' ? (
@@ -401,54 +398,19 @@ export default function OnboardingScreen() {
                   onContinue={() => save('identity', { didit: true })}
                 />
               ) : (
-              <>
-              <div className="mt-8 space-y-4">
-                <SelectField label="ID type" value={idType} onChange={(event) => setIdType(event.target.value)}>
-                  {ID_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </SelectField>
-                <Field
-                  label="ID number"
-                  value={idNumber}
-                  onChange={(event) => setIdNumber(event.target.value)}
-                  error={fieldError ?? undefined}
-                />
-              </div>
-
-              {/* Checked by campus ops, not by a machine: the selfie becomes
-                  the photo customers see when this rider is on the way. */}
-              <div className="mt-6">
-                <p className="text-[14px] font-bold">Add a selfie and a photo of that ID</p>
-                <p className="mt-1 mb-3 text-[13px] leading-relaxed text-ink-faint">
-                  Customers see your selfie and a verified mark once campus ops checks it against your ID.
-                </p>
-                <PhotoPair
-                  selfieUrl={selfieUrl}
-                  idUrl={idImageUrl}
-                  onChange={(selfie, id) => {
-                    setSelfieUrl(selfie)
-                    setIdImageUrl(id)
-                  }}
-                />
-              </div>
-
-              <div className="mt-8">
-                <Button
-                  variant="volt"
-                  size="lg"
-                  fullWidth
-                  loading={busy}
-                  iconRight={ArrowRight}
-                  disabled={!idNumber.trim() || !selfieUrl || !idImageUrl}
-                  onClick={() => save('identity', { idType, idNumber, selfieUrl, idImageUrl })}
-                >
-                  Continue
-                </Button>
-              </div>
-              </>
+                // The marketplace seller check: name, matric, student ID photo,
+                // selfie. The campus team approves it from the admin console.
+                <div className="mt-8">
+                  {rider && (
+                    <StudentIdForm
+                      rider={rider}
+                      busy={busy}
+                      error={fieldError}
+                      submitLabel="Send for approval"
+                      onSubmit={(values) => save('identity', values)}
+                    />
+                  )}
+                </div>
               )}
             </motion.div>
           )}

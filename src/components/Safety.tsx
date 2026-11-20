@@ -9,6 +9,14 @@ import {
   type SosState,
 } from '../lib/api'
 import { pickImages, prepareImage, uploadImage } from '../lib/cloudinary'
+import {
+  cleanMatric,
+  clearIdentityDraft,
+  loadIdentityDraft,
+  matricLooksValid,
+  nameLooksValid,
+  saveIdentityDraft,
+} from '../lib/identityDraft'
 import { useRider } from '../contexts/RiderContext'
 import { Button, Field, IconBadge, Sheet, cn, tap } from './ui'
 
@@ -27,10 +35,12 @@ export function PhotoPair({
   selfieUrl,
   idUrl,
   onChange,
+  idLabel = 'Your ID',
 }: {
   selfieUrl: string | null
   idUrl: string | null
   onChange: (selfieUrl: string | null, idUrl: string | null) => void
+  idLabel?: string
 }) {
   const [busy, setBusy] = useState<'selfie' | 'id' | null>(null)
 
@@ -60,7 +70,7 @@ export function PhotoPair({
         onClick={() => void take('selfie')}
       />
       <PhotoTile
-        label="Your ID"
+        label={idLabel}
         hint="Name and photo readable"
         icon={IdCard}
         url={idUrl}
@@ -116,6 +126,98 @@ function PhotoTile({
   )
 }
 
+/**
+ * The student-ID check, as the marketplace seller form asks for it: name as
+ * on the student ID, matric number, a photo of that ID and a selfie. Nothing
+ * else. Everything typed or uploaded is kept on the device until it is sent,
+ * so a camera that kills the page costs the rider nothing.
+ */
+export function StudentIdForm({
+  rider,
+  busy,
+  error,
+  submitLabel,
+  onSubmit,
+}: {
+  rider: Rider
+  busy: boolean
+  error?: string | null
+  submitLabel: string
+  onSubmit: (values: { fullName: string; matricNumber: string; selfieUrl: string; idImageUrl: string }) => Promise<boolean>
+}) {
+  const [draft] = useState(() => loadIdentityDraft(rider.uid))
+  const [fullName, setFullName] = useState(
+    draft?.fullName || rider.documents?.fullName || [rider.firstName, rider.lastName].filter(Boolean).join(' '),
+  )
+  const [matricNumber, setMatricNumber] = useState(draft?.matricNumber || rider.campus?.matricNumber || '')
+  const [selfieUrl, setSelfieUrl] = useState<string | null>(draft?.selfieUrl ?? null)
+  const [idImageUrl, setIdImageUrl] = useState<string | null>(draft?.idImageUrl ?? null)
+
+  useEffect(() => {
+    saveIdentityDraft(rider.uid, { fullName, matricNumber, selfieUrl, idImageUrl })
+  }, [rider.uid, fullName, matricNumber, selfieUrl, idImageUrl])
+
+  const ready = nameLooksValid(fullName) && matricLooksValid(matricNumber) && Boolean(selfieUrl && idImageUrl)
+  const missing = !nameLooksValid(fullName)
+    ? 'Enter your full name as it is on your student ID.'
+    : !matricLooksValid(matricNumber)
+      ? 'Enter your matric or registration number.'
+      : !idImageUrl
+        ? 'Add a photo of your student ID.'
+        : !selfieUrl
+          ? 'Add a selfie.'
+          : null
+
+  const send = async () => {
+    if (!ready || !selfieUrl || !idImageUrl) return
+    const sent = await onSubmit({
+      fullName: fullName.replace(/\s+/g, ' ').trim(),
+      matricNumber: cleanMatric(matricNumber),
+      selfieUrl,
+      idImageUrl,
+    })
+    if (sent) clearIdentityDraft(rider.uid)
+  }
+
+  return (
+    <div className="space-y-4">
+      <Field
+        label="Full name (as on your student ID)"
+        autoComplete="name"
+        value={fullName}
+        onChange={(e) => setFullName(e.target.value)}
+      />
+      <Field
+        label="Matric / registration number"
+        autoCapitalize="characters"
+        value={matricNumber}
+        onChange={(e) => setMatricNumber(e.target.value.toUpperCase())}
+      />
+      <div>
+        <p className="text-[14px] font-bold">Your student ID and a selfie</p>
+        <p className="mt-1 mb-3 text-[13px] leading-relaxed text-ink-faint">
+          The campus team matches your face to your ID and approves you. Customers then see your selfie and a verified
+          mark.
+        </p>
+        <PhotoPair
+          selfieUrl={selfieUrl}
+          idUrl={idImageUrl}
+          idLabel="Student ID"
+          onChange={(selfie, id) => {
+            setSelfieUrl(selfie)
+            setIdImageUrl(id)
+          }}
+        />
+      </div>
+      {error && <p className="text-[13px] text-ember-light">{error}</p>}
+      {!ready && missing && <p className="text-[12.5px] text-ink-faint">{missing}</p>}
+      <Button variant="volt" size="lg" fullWidth loading={busy} disabled={!ready} onClick={() => void send()}>
+        {submitLabel}
+      </Button>
+    </div>
+  )
+}
+
 /* ── Verification ───────────────────────────────────────────────────────── */
 
 /** The account screen's "get verified" sheet. */
@@ -144,27 +246,20 @@ export function DiditButton({ returnTo, label = 'Verify my ID' }: { returnTo: '/
 
 export function VerificationSheet({ open, onClose, rider }: { open: boolean; onClose: () => void; rider: Rider }) {
   const { setRider } = useRider()
-  const [selfie, setSelfie] = useState<string | null>(null)
-  const [id, setId] = useState<string | null>(null)
-  const [idNumber, setIdNumber] = useState(rider.documents?.idNumber ?? '')
   const [sending, setSending] = useState(false)
   const reason = rider.verification?.reason
 
-  const send = async () => {
-    if (!selfie || !id) return
+  const send = async (values: { fullName: string; matricNumber: string; selfieUrl: string; idImageUrl: string }) => {
     setSending(true)
     try {
-      const updated = await riderApi.submitVerification({
-        selfieUrl: selfie,
-        idImageUrl: id,
-        idType: rider.documents?.idType ?? 'Student ID',
-        idNumber: idNumber.trim(),
-      })
+      const updated = await riderApi.submitVerification(values)
       setRider(updated)
-      toast.success('Sent. Campus ops will check your photos.')
+      toast.success('Sent. The campus team will check it and approve you.')
       onClose()
+      return true
     } catch (error) {
-      toast.error(errorMessage(error, 'Could not send your photos.'))
+      toast.error(errorMessage(error, 'Could not send your details.'))
+      return false
     } finally {
       setSending(false)
     }
@@ -195,34 +290,12 @@ export function VerificationSheet({ open, onClose, rider }: { open: boolean; onC
   return (
     <Sheet open={open} onClose={onClose} title="Get verified">
       <div className="space-y-5">
-        <p className="text-[14px] leading-relaxed text-ink-soft">
-          Campus ops matches your selfie to your ID. Once they do, customers see your photo and a verified mark when you
-          are on the way — which is what makes them open the door.
-        </p>
         {rider.verificationStatus === 'rejected' && reason && (
           <p className="rounded-2xl border border-ember/30 bg-ember/8 p-3.5 text-[13px] leading-snug text-ember-light">
             Last time: {reason}
           </p>
         )}
-        <PhotoPair
-          selfieUrl={selfie}
-          idUrl={id}
-          onChange={(s, i) => {
-            setSelfie(s)
-            setId(i)
-          }}
-        />
-        <Field label="ID number" value={idNumber} onChange={(e) => setIdNumber(e.target.value)} />
-        <Button
-          variant="volt"
-          size="lg"
-          fullWidth
-          loading={sending}
-          disabled={!selfie || !id || !idNumber.trim()}
-          onClick={() => void send()}
-        >
-          Send for checking
-        </Button>
+        <StudentIdForm rider={rider} busy={sending} submitLabel="Send for approval" onSubmit={send} />
       </div>
     </Sheet>
   )

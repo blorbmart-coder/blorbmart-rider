@@ -109,7 +109,7 @@ export interface Rider {
   } | null
   vehicleType?: VehicleType | null
   plateNumber?: string | null
-  documents?: { idType: string; idNumber: string; selfieUrl?: string | null; idImageUrl?: string | null } | null
+  documents?: { idType: string; idNumber: string; fullName?: string | null; selfieUrl?: string | null; idImageUrl?: string | null } | null
   onboardingStep: OnboardingStep
   onboardingComplete: boolean
   status: RiderStatus
@@ -431,7 +431,7 @@ export const riderApi = {
   syncDidit: () => unwrap<Rider>(api.post('/api/rider/verification/didit/sync')),
 
   /** Sends a selfie and ID photo (already uploaded) for campus ops to check. */
-  submitVerification: (body: { selfieUrl: string; idImageUrl: string; idType?: string; idNumber?: string }) =>
+  submitVerification: (body: { selfieUrl: string; idImageUrl: string; fullName: string; matricNumber: string }) =>
     unwrap<Rider>(api.post('/api/rider/verification', body)),
 
   setAvailability: (isAvailable: boolean, location?: GeolocationCoordinates | null) =>
